@@ -1,0 +1,6 @@
+# Java
+target/
+*.log
+
+# Env
+application-*.yml
