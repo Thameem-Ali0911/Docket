@@ -34,7 +34,7 @@
 
 ## Next Steps (in order)
 
-1. Initialize `frontend/` (Vite + React + TS + Tailwind) per architecture.md folder structure
+1. Initialize `frontend/` (Vite + React + JavaScript/JSX + Tailwind) per architecture.md folder structure
 2. Initialize `backend/` (Spring Boot 3.x via Spring Initializr — Web, Data JPA, Security, Validation, Flyway) using the `src/main/java/com/docket/` layout in architecture.md
 3. Set up PostgreSQL connection (local or Supabase/Neon free tier), configure `application.yml` datasource, run first Flyway migration
 4. Build `/api/health` endpoint and confirm frontend can call it
