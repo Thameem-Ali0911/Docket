@@ -125,15 +125,15 @@ docket/
 │
 ├── frontend/
 │   ├── src/
-│   │   ├── main.tsx
-│   │   ├── App.tsx
+│   │   ├── main.jsx
+│   │   ├── App.jsx
 │   │   ├── pages/
-│   │   │   ├── Login.tsx
-│   │   │   ├── Signup.tsx
-│   │   │   ├── Dashboard.tsx
-│   │   │   ├── DocumentDetail.tsx
-│   │   │   ├── UploadDocument.tsx
-│   │   │   └── TemplateManager.tsx
+│   │   │   ├── Login.jsx
+│   │   │   ├── Signup.jsx
+│   │   │   ├── Dashboard.jsx
+│   │   │   ├── DocumentDetail.jsx
+│   │   │   ├── UploadDocument.jsx
+│   │   │   └── TemplateManager.jsx
 │   │   ├── components/
 │   │   │   ├── layout/           # Navbar, Sidebar, PageShell
 │   │   │   ├── documents/        # DocumentCard, DocumentTable, StatusBadge
@@ -141,7 +141,7 @@ docket/
 │   │   │   └── ui/                # shared buttons, inputs, modal (design.md tokens)
 │   │   ├── hooks/                # useAuth, useDocuments, useUpload
 │   │   ├── lib/                  # api client, query client setup
-│   │   ├── types/                # shared TS types (mirrors backend schemas)
+│   │   ├── types/                # shared JS shape helpers/JSDoc typedefs (mirrors backend schemas)
 │   │   └── styles/                # tailwind.css, theme tokens
 │   ├── index.html
 │   ├── tailwind.config.js

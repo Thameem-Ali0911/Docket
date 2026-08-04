@@ -1,0 +1,178 @@
+diff --git a/AGENTS.md b/AGENTS.md
+index ae69721..e7595d7 100644
+--- a/AGENTS.md
++++ b/AGENTS.md
+@@ -86,7 +86,7 @@ A session log entry should look like this:
+ ```markdown
+ ### Session N — YYYY-MM-DD
+ - [What was built/changed, in plain language]
+-- Files touched: path/to/File1.java, path/to/File2.tsx
++- Files touched: path/to/File1.java, path/to/File2.jsx
+ - Tested/confirmed: [what you actually ran/verified]
+ - Still untested / follow-up: [anything left in a known-incomplete state]
+ - Next session should: [concrete next action]
+diff --git a/README.md b/README.md
+index 889645e..5576895 100644
+--- a/README.md
++++ b/README.md
+@@ -42,7 +42,7 @@ The MVP is intentionally scoped to **three document types**: Contracts, Invoices
+ 
+ | Layer | Technology |
+ |---|---|
+-| Frontend | React 18, Vite, TypeScript, Tailwind CSS, React Router, TanStack Query, Recharts |
++| Frontend | React 18, Vite, JavaScript (JSX), Tailwind CSS, React Router, TanStack Query, Recharts |
+ | Backend | Java 17+, Spring Boot 3.x (Spring Web, Spring Data JPA, Spring Security, Flyway, Bean Validation, Jackson) |
+ | Database | PostgreSQL |
+ | OCR / PDF | Tess4J (Tesseract wrapper), Apache PDFBox |
+diff --git a/architecture.md b/architecture.md
+index c7395a2..5150a9b 100644
+--- a/architecture.md
++++ b/architecture.md
+@@ -125,15 +125,15 @@ docket/
+ │
+ ├── frontend/
+ │   ├── src/
+-│   │   ├── main.tsx
+-│   │   ├── App.tsx
++│   │   ├── main.jsx
++│   │   ├── App.jsx
+ │   │   ├── pages/
+-│   │   │   ├── Login.tsx
+-│   │   │   ├── Signup.tsx
+-│   │   │   ├── Dashboard.tsx
+-│   │   │   ├── DocumentDetail.tsx
+-│   │   │   ├── UploadDocument.tsx
+-│   │   │   └── TemplateManager.tsx
++│   │   │   ├── Login.jsx
++│   │   │   ├── Signup.jsx
++│   │   │   ├── Dashboard.jsx
++│   │   │   ├── DocumentDetail.jsx
++│   │   │   ├── UploadDocument.jsx
++│   │   │   └── TemplateManager.jsx
+ │   │   ├── components/
+ │   │   │   ├── layout/           # Navbar, Sidebar, PageShell
+ │   │   │   ├── documents/        # DocumentCard, DocumentTable, StatusBadge
+@@ -141,7 +141,7 @@ docket/
+ │   │   │   └── ui/                # shared buttons, inputs, modal (design.md tokens)
+ │   │   ├── hooks/                # useAuth, useDocuments, useUpload
+ │   │   ├── lib/                  # api client, query client setup
+-│   │   ├── types/                # shared TS types (mirrors backend schemas)
++│   │   ├── types/                # shared JS shape helpers/JSDoc typedefs (mirrors backend schemas)
+ │   │   └── styles/                # tailwind.css, theme tokens
+ │   ├── index.html
+ │   ├── tailwind.config.js
+diff --git a/frontend/README.md b/frontend/README.md
+index d6af7e3..b220d77 100644
+--- a/frontend/README.md
++++ b/frontend/README.md
+@@ -1,4 +1,4 @@
+-# React + TypeScript + Vite
++# React + JavaScript (JSX) + Vite
+ 
+ This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+ 
+@@ -13,15 +13,12 @@ The React Compiler is not enabled on this template because of its impact on dev
+ 
+ ## Expanding the Oxlint configuration
+ 
+-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
++If you are developing a production application, you can customize `.oxlintrc.json` to add or tighten rules for this JavaScript/JSX codebase:
+ 
+ ```json
+ {
+   "$schema": "./node_modules/oxlint/configuration_schema.json",
+-  "plugins": ["react", "typescript", "oxc"],
+-  "options": {
+-    "typeAware": true
+-  },
++  "plugins": ["react", "oxc"],
+   "rules": {
+     "react/rules-of-hooks": "error",
+     "react/only-export-components": ["warn", { "allowConstantExport": true }]
+diff --git a/memory.md b/memory.md
+index 912220f..3ed7c09 100644
+--- a/memory.md
++++ b/memory.md
+@@ -34,7 +34,7 @@
+ 
+ ## Next Steps (in order)
+ 
+-1. Initialize `frontend/` (Vite + React + TS + Tailwind) per architecture.md folder structure
++1. Initialize `frontend/` (Vite + React + JavaScript/JSX + Tailwind) per architecture.md folder structure
+ 2. Initialize `backend/` (Spring Boot 3.x via Spring Initializr — Web, Data JPA, Security, Validation, Flyway) using the `src/main/java/com/docket/` layout in architecture.md
+ 3. Set up PostgreSQL connection (local or Supabase/Neon free tier), configure `application.yml` datasource, run first Flyway migration
+ 4. Build `/api/health` endpoint and confirm frontend can call it
+diff --git a/phases.md b/phases.md
+index ecb4e06..a7df3a9 100644
+--- a/phases.md
++++ b/phases.md
+@@ -9,7 +9,7 @@
+ ## Phase 0 — Project Setup
+ **Goal:** Empty-but-running skeleton for both frontend and backend.
+ 
+-- Initialize `frontend/` (Vite + React + TS + Tailwind) and `backend/` (Spring Boot 3.x project via Spring Initializr — Web, Data JPA, Security, Validation, Flyway dependencies)
++- Initialize `frontend/` (Vite + React + JavaScript/JSX + Tailwind) and `backend/` (Spring Boot 3.x project via Spring Initializr — Web, Data JPA, Security, Validation, Flyway dependencies)
+ - Set up PostgreSQL (local or free-tier cloud), configure `application.yml` datasource, and confirm the first Flyway migration runs on startup
+ - Set up `.env.example` in both frontend and backend
+ - Basic `README.md` with how to run both apps locally
+@@ -26,7 +26,7 @@
+ - Signup/login endpoints with JWT issuance, bcrypt password hashing
+ - Frontend: Login page, Signup page, protected route wrapper
+ - On signup, auto-create a workspace for the user
+-- Empty `Dashboard.tsx` page showing "No documents yet"
++- Empty `Dashboard.jsx` page showing "No documents yet"
+ - Backend: `AuthController.java` route + `security/JwtService.java` / `security/JwtAuthFilter.java` + `config/SecurityConfig.java` for the filter chain
+ 
+ **Definition of Done:** A new user can sign up, log in, get redirected to a dashboard, and refresh the page without losing session (JWT persisted in storage/cookie).
+@@ -38,7 +38,7 @@
+ 
+ - DB schema: `documents`
+ - Upload endpoint: validate file type/size, store file (local disk for dev), create `documents` row
+-- Frontend: `UploadDocument.tsx` page with file picker + document type selector (only Invoice enabled this phase)
++- Frontend: `UploadDocument.jsx` page with file picker + document type selector (only Invoice enabled this phase)
+ - Dashboard lists uploaded documents with status badge
+ 
+ **Definition of Done:** Upload → row appears in dashboard list with correct filename and status, scoped to the correct workspace.
+@@ -61,7 +61,7 @@
+ 
+ - Build `prompt/ExtractInvoicePrompt.java` — strict JSON-only output, grounded-in-text instruction (see rules.md §3)
+ - Build `service/ExtractionService.java` to call Claude via `AnthropicClient`, deserialize with Jackson into `InvoiceExtractionDto`, validate with `@Valid`, persist to `extractions` table
+-- Frontend: `DocumentDetail.tsx` shows extracted fields in a clean table next to a preview of the original file
++- Frontend: `DocumentDetail.jsx` shows extracted fields in a clean table next to a preview of the original file
+ 
+ **Definition of Done:** Uploading a sample invoice produces correct, review-able structured fields for at least 8/10 test invoices.
+ 
+@@ -72,7 +72,7 @@
+ 
+ - Build `prompt/SummarizePrompt.java` and `service/SummarizeService.java`
+ - Store in `summaries` table
+-- Display in `DocumentDetail.tsx` as a "Summary" card
++- Display in `DocumentDetail.jsx` as a "Summary" card
+ 
+ **Definition of Done:** Every processed document shows a coherent 3-5 sentence summary.
+ 
+@@ -82,9 +82,9 @@
+ **Goal:** User can designate a document as the "standard template" for invoices, and new invoices get compared against it.
+ 
+ - DB schema: `templates`, `anomaly_flags`
+-- `TemplateManager.tsx` page: pick/upload a document to mark as the standard for a type
++- `TemplateManager.jsx` page: pick/upload a document to mark as the standard for a type
+ - Build `prompt/AnomalyCheckPrompt.java` + `service/AnomalyService.java`: compares new document's extracted text/fields against the template's, returns a list of flagged differences with short explanations
+-- Frontend: `AnomalyFlag.tsx` component shows ⚠️/✅ per relevant field in `DocumentDetail.tsx`
++- Frontend: `AnomalyFlag.jsx` component shows ⚠️/✅ per relevant field in `DocumentDetail.jsx`
+ 
+ **Definition of Done:** Uploading an invoice with a deliberately altered field (e.g., different payment terms) against a saved template correctly produces a flag with an accurate explanation.
+ 
+diff --git a/rules.md b/rules.md
+index b717a29..fa9762b 100644
+--- a/rules.md
++++ b/rules.md
+@@ -56,7 +56,7 @@
+ 
+ ## 6. Code Style & Structure
+ 
+-- Frontend: TypeScript strict mode on.
++- Frontend: Plain JavaScript with JSX (no TypeScript); use ESLint/oxlint with recommended rules and PropTypes (or JSDoc typedefs) where type-checking value is needed.
+ - Backend: standard **Java conventions** — follow Google Java Style or the default IntelliJ formatter; keep code compiler-warning clean.
+ - No business logic inside controllers — controllers call services directly (thin `controller/*.java` classes); keep services focused and testable, repositories handle only data access (no business logic in repositories either).
+ - Consistent naming: Java classes `PascalCase`, methods/variables `camelCase`, constants `UPPER_SNAKE_CASE`; React components `PascalCase`, frontend variables/functions `camelCase`.

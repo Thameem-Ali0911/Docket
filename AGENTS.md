@@ -86,7 +86,7 @@ A session log entry should look like this:
 ```markdown
 ### Session N — YYYY-MM-DD
 - [What was built/changed, in plain language]
-- Files touched: path/to/File1.java, path/to/File2.tsx
+- Files touched: path/to/File1.java, path/to/File2.jsx
 - Tested/confirmed: [what you actually ran/verified]
 - Still untested / follow-up: [anything left in a known-incomplete state]
 - Next session should: [concrete next action]

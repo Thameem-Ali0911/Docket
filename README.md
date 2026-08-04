@@ -42,7 +42,7 @@ The MVP is intentionally scoped to **three document types**: Contracts, Invoices
 
 | Layer | Technology |
 |---|---|
-| Frontend | React 18, Vite, TypeScript, Tailwind CSS, React Router, TanStack Query, Recharts |
+| Frontend | React 18, Vite, JavaScript (JSX), Tailwind CSS, React Router, TanStack Query, Recharts |
 | Backend | Java 17+, Spring Boot 3.x (Spring Web, Spring Data JPA, Spring Security, Flyway, Bean Validation, Jackson) |
 | Database | PostgreSQL |
 | OCR / PDF | Tess4J (Tesseract wrapper), Apache PDFBox |

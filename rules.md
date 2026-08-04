@@ -56,7 +56,7 @@
 
 ## 6. Code Style & Structure
 
-- Frontend: TypeScript strict mode on.
+- Frontend: Plain JavaScript with JSX (no TypeScript); use ESLint/oxlint with recommended rules and PropTypes (or JSDoc typedefs) where type-checking value is needed.
 - Backend: standard **Java conventions** — follow Google Java Style or the default IntelliJ formatter; keep code compiler-warning clean.
 - No business logic inside controllers — controllers call services directly (thin `controller/*.java` classes); keep services focused and testable, repositories handle only data access (no business logic in repositories either).
 - Consistent naming: Java classes `PascalCase`, methods/variables `camelCase`, constants `UPPER_SNAKE_CASE`; React components `PascalCase`, frontend variables/functions `camelCase`.

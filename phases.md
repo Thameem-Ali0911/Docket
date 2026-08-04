@@ -9,7 +9,7 @@
 ## Phase 0 — Project Setup
 **Goal:** Empty-but-running skeleton for both frontend and backend.
 
-- Initialize `frontend/` (Vite + React + TS + Tailwind) and `backend/` (Spring Boot 3.x project via Spring Initializr — Web, Data JPA, Security, Validation, Flyway dependencies)
+- Initialize `frontend/` (Vite + React + JavaScript/JSX + Tailwind) and `backend/` (Spring Boot 3.x project via Spring Initializr — Web, Data JPA, Security, Validation, Flyway dependencies)
 - Set up PostgreSQL (local or free-tier cloud), configure `application.yml` datasource, and confirm the first Flyway migration runs on startup
 - Set up `.env.example` in both frontend and backend
 - Basic `README.md` with how to run both apps locally
@@ -26,7 +26,7 @@
 - Signup/login endpoints with JWT issuance, bcrypt password hashing
 - Frontend: Login page, Signup page, protected route wrapper
 - On signup, auto-create a workspace for the user
-- Empty `Dashboard.tsx` page showing "No documents yet"
+- Empty `Dashboard.jsx` page showing "No documents yet"
 - Backend: `AuthController.java` route + `security/JwtService.java` / `security/JwtAuthFilter.java` + `config/SecurityConfig.java` for the filter chain
 
 **Definition of Done:** A new user can sign up, log in, get redirected to a dashboard, and refresh the page without losing session (JWT persisted in storage/cookie).
@@ -38,7 +38,7 @@
 
 - DB schema: `documents`
 - Upload endpoint: validate file type/size, store file (local disk for dev), create `documents` row
-- Frontend: `UploadDocument.tsx` page with file picker + document type selector (only Invoice enabled this phase)
+- Frontend: `UploadDocument.jsx` page with file picker + document type selector (only Invoice enabled this phase)
 - Dashboard lists uploaded documents with status badge
 
 **Definition of Done:** Upload → row appears in dashboard list with correct filename and status, scoped to the correct workspace.
@@ -61,7 +61,7 @@
 
 - Build `prompt/ExtractInvoicePrompt.java` — strict JSON-only output, grounded-in-text instruction (see rules.md §3)
 - Build `service/ExtractionService.java` to call Claude via `AnthropicClient`, deserialize with Jackson into `InvoiceExtractionDto`, validate with `@Valid`, persist to `extractions` table
-- Frontend: `DocumentDetail.tsx` shows extracted fields in a clean table next to a preview of the original file
+- Frontend: `DocumentDetail.jsx` shows extracted fields in a clean table next to a preview of the original file
 
 **Definition of Done:** Uploading a sample invoice produces correct, review-able structured fields for at least 8/10 test invoices.
 
@@ -72,7 +72,7 @@
 
 - Build `prompt/SummarizePrompt.java` and `service/SummarizeService.java`
 - Store in `summaries` table
-- Display in `DocumentDetail.tsx` as a "Summary" card
+- Display in `DocumentDetail.jsx` as a "Summary" card
 
 **Definition of Done:** Every processed document shows a coherent 3-5 sentence summary.
 
@@ -82,9 +82,9 @@
 **Goal:** User can designate a document as the "standard template" for invoices, and new invoices get compared against it.
 
 - DB schema: `templates`, `anomaly_flags`
-- `TemplateManager.tsx` page: pick/upload a document to mark as the standard for a type
+- `TemplateManager.jsx` page: pick/upload a document to mark as the standard for a type
 - Build `prompt/AnomalyCheckPrompt.java` + `service/AnomalyService.java`: compares new document's extracted text/fields against the template's, returns a list of flagged differences with short explanations
-- Frontend: `AnomalyFlag.tsx` component shows ⚠️/✅ per relevant field in `DocumentDetail.tsx`
+- Frontend: `AnomalyFlag.jsx` component shows ⚠️/✅ per relevant field in `DocumentDetail.jsx`
 
 **Definition of Done:** Uploading an invoice with a deliberately altered field (e.g., different payment terms) against a saved template correctly produces a flag with an accurate explanation.
 
