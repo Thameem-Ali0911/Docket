@@ -12,6 +12,8 @@ backend/target/
 **/*.env
 frontend/.env*
 backend/src/main/resources/application-*.yml
+!frontend/.env.example
+!backend/src/main/resources/application-*.yml.example
 
 # OS files
 .DS_Store
