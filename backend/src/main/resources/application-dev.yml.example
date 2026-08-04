@@ -2,7 +2,7 @@ spring:
   datasource:
     url: jdbc:postgresql://localhost:5432/docket
     username: postgres
-    password: password
+    password: root
   jpa:
     hibernate:
       ddl-auto: none
