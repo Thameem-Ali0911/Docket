@@ -16,9 +16,9 @@
 
 ## Current Status
 
-- **Active Phase:** Phase 0 — Project Setup (not yet started)
-- **Last Updated:** 2026-07-31
-- **Overall Progress:** 0% — planning documents complete (prd.md, architecture.md, rules.md, phases.md, design.md), no code written yet
+- **Active Phase:** Phase 0 — Project Setup (in progress, nearly complete)
+- **Last Updated:** 2026-08-05
+- **Overall Progress:** ~10% — planning documents complete; frontend and backend scaffolds exist and both run locally; `/api/health` endpoint built and now reachable from the frontend after a CORS fix (see Session 4 below)
 
 ## Completed
 
@@ -27,18 +27,22 @@
 - [x] Coding/AI rules established (`rules.md`)
 - [x] Phased build plan created (`phases.md`)
 - [x] Design system defined (`design.md`)
+- [x] `frontend/` initialized (Vite + React, `App.jsx` calling backend health check)
+- [x] `backend/` initialized (Spring Boot, Maven wrapper committed, `DocketApplication.java`)
+- [x] `GET /api/health` endpoint built (`HealthController.java`)
+- [x] First Flyway migration written (`V1__init_schema.sql` — `workspaces`, `users` tables)
+- [x] Basic `SecurityConfig.java` written (permits `/api/health`, `/api/auth/**`; CORS fixed — see Known Issues)
 
 ## In Progress
 
-- Nothing yet — next session should begin Phase 0 (Project Setup) per `phases.md`.
+- Frontend/backend are both running locally and the health check now succeeds after the CORS fix. Not yet confirmed: DB connection actually verified end-to-end against a running Postgres instance, and whether Flyway migration `V1` has actually been applied (ran on a live DB) vs. just written.
 
 ## Next Steps (in order)
 
-1. Initialize `frontend/` (Vite + React + JavaScript/JSX + Tailwind) per architecture.md folder structure
-2. Initialize `backend/` (Spring Boot 3.x via Spring Initializr — Web, Data JPA, Security, Validation, Flyway) using the `src/main/java/com/docket/` layout in architecture.md
-3. Set up PostgreSQL connection (local or Supabase/Neon free tier), configure `application.yml` datasource, run first Flyway migration
-4. Build `/api/health` endpoint and confirm frontend can call it
-5. Update this file's "Current Status" to Phase 1 once Phase 0's Definition of Done (see phases.md) is met
+1. Confirm PostgreSQL is reachable and `V1__init_schema.sql` applies cleanly on backend startup (check startup logs for Flyway success)
+2. Manually confirm the frontend health check now shows green after the CORS fix + backend restart
+3. Close out Phase 0's Definition of Done (see phases.md) once the above are verified, then flip Active Phase to Phase 1 (Auth & Workspace)
+4. Note: `memory.md` had drifted from the actual repo state (code existed here that wasn't logged) — future sessions should treat this as a reminder to always run the AGENTS.md §1.7 repo-state check before trusting this file
 
 ## Key Decisions & Why
 
@@ -53,7 +57,7 @@
 
 ## Known Issues / Gotchas
 
-- None yet — will be populated once development starts.
+- **CORS not configured → frontend health check fails with "Failed to fetch" (fixed Session 4).** `SecurityConfig.java` had no `CorsConfigurationSource` bean, so Spring Security silently blocked the browser's cross-origin request from the Vite dev server (`localhost:5173`) to the backend (`localhost:8080`). This shows up in the browser as a generic "Failed to fetch," not a normal HTTP error, which makes it easy to misdiagnose as a wrong URL/port. Fixed by adding a `corsConfigurationSource()` bean allowing `http://localhost:5173` and wiring `.cors(...)` into the filter chain. **Any future new frontend origin (e.g. a deployed Vercel/Netlify URL) must be added to `allowedOrigins` here too**, or the same symptom will reappear in production.
 
 ## Ideas / Not Yet Approved
 
@@ -99,3 +103,12 @@ mvn spring-boot:run
 - Updated phases.md: all backend file references now point to `.java` classes (`controller/`, `service/`, `prompt/`, `security/`) instead of `.py` files
 - Updated memory.md: next steps and commands reference now assume Spring Initializr + Maven + Flyway workflow
 - Still no code written — still Phase 0, not yet started
+
+### Session 4 — 2026-08-05
+- Reviewed `AGENTS.md` and strengthened the loop protocol itself: added a repo-state verification step (§1.7), an anti-overclaiming rule and clean-stop-on-budget rule (§2), a Git & Commit Discipline section (§4.5), and a final "Definition of Production-Ready" exit checklist (§8)
+- Discovered `memory.md` had drifted significantly from the actual repo: frontend (Vite/React) and backend (Spring Boot, `HealthController`, `SecurityConfig`, Maven wrapper) had already been scaffolded and a first Flyway migration (`V1__init_schema.sql`) written, none of which was reflected here — corrected Current Status/Completed/Next Steps to match reality
+- Diagnosed and fixed: frontend showed "Backend health check: error — Failed to fetch." Root cause was a missing CORS configuration in `SecurityConfig.java` — Spring Security was blocking the cross-origin request from the Vite dev server, and the browser reported it as a generic fetch failure rather than a clear HTTP error. Added a `CorsConfigurationSource` bean allowing `http://localhost:5173` and wired `.cors(...)` into the filter chain.
+- Files touched: `AGENTS.md`, `backend/src/main/java/com/docket/config/SecurityConfig.java`, `memory.md`
+- Tested/confirmed: Reviewed `HealthController.java` (correct, `GET /api/health` → `"OK"`), `application.yml` (port 8080, matches frontend's `VITE_API_BASE_URL`), and the CORS bean addition itself was reviewed for correctness — the fix has **not yet been confirmed working in the browser** by re-running the app after this change, since that happens on the user's machine
+- Still untested / follow-up: confirm the health check goes green after restarting the backend with the CORS fix; confirm Postgres is actually running and `V1__init_schema.sql` applies cleanly on startup
+- Next session should: verify the CORS fix worked, verify the DB migration applied, then close out Phase 0's Definition of Done and move `memory.md`'s Active Phase to Phase 1
