@@ -1,0 +1,385 @@
+diff --git a/.env.example b/.env.example
+new file mode 100644
+index 0000000..b358ed3
+--- /dev/null
++++ b/.env.example
+@@ -0,0 +1,13 @@
++# Copy to .env and fill in real values before running `docker compose up`.
++# .env is git-ignored — never commit real secrets here.
++
++POSTGRES_USER=postgres
++POSTGRES_PASSWORD=root
++
++JWT_SECRET=change-me-to-a-long-random-string
++
++# Get from https://console.anthropic.com
++ANTHROPIC_API_KEY=
++
++# Base URL the frontend bundle will call at runtime (browser-facing, not container-internal)
++VITE_API_BASE_URL=http://localhost:8080
+diff --git a/README.md b/README.md
+index 5576895..035c329 100644
+--- a/README.md
++++ b/README.md
+@@ -64,14 +64,19 @@ docket/
+ ├── design.md             # Colors, fonts, typography, component conventions
+ ├── memory.md              # Running project log / session history
+ ├── README.md              # You are here
++├── docker-compose.yml     # Runs db + backend + frontend together (`docker compose up --build`)
++├── .env.example           # Compose-level env vars (Postgres creds, JWT secret, Anthropic key)
+ │
+ ├── frontend/
++│   ├── Dockerfile         # Multi-stage: npm run build → served by nginx
++│   ├── nginx.conf
+ │   └── src/
+ │       ├── pages/         # Login, Dashboard, DocumentDetail, UploadDocument, ...
+ │       ├── components/    # layout, documents, extraction, shared ui
+ │       ├── hooks/, lib/, types/, styles/
+ │
+ └── backend/
++    ├── Dockerfile         # Multi-stage: Maven build → Temurin JRE + Tesseract runtime
+     └── src/main/java/com/docket/
+         ├── controller/    # REST controllers (Auth, Document, Template, Workspace)
+         ├── entity/        # JPA entities
+@@ -87,7 +92,9 @@ See [`architecture.md`](./architecture.md) for the complete, annotated folder tr
+ 
+ ## Prerequisites
+ 
+-Install these before running the project locally:
++**Fastest path:** [Docker Desktop](https://www.docker.com/products/docker-desktop/) is the only thing you need — see [Option A](#getting-started) below. Everything past this section assumes you're running natively instead.
++
++Install these before running the project locally without Docker:
+ 
+ - **Java 17+ (JDK)** — Temurin/Adoptium or Oracle JDK
+ - **Maven 3.9+**
+@@ -106,6 +113,31 @@ Full details and a sanity-check command block: see `architecture.md` §8 "Prereq
+ 
+ ## Getting Started
+ 
++### Option A: Docker (recommended — one command, no local Java/Node/Postgres/Tesseract needed)
++
++Requires [Docker Desktop](https://www.docker.com/products/docker-desktop/).
++
++```bash
++cp .env.example .env
++# edit .env — set ANTHROPIC_API_KEY at minimum; POSTGRES_PASSWORD/JWT_SECRET have dev defaults
++
++docker compose up --build
++```
++
++This builds and starts three containers together:
++
++| Service | URL | What it is |
++|---|---|---|
++| `frontend` | http://localhost:5173 | React app built with Vite, served by nginx |
++| `backend` | http://localhost:8080 | Spring Boot API |
++| `db` | localhost:5432 | PostgreSQL 16 (data persisted in a Docker volume) |
++
++Flyway migrations run automatically on backend startup, same as running natively. Stop everything with `Ctrl+C` or `docker compose down` (add `-v` to also wipe the Postgres volume). Rebuild after changing backend or frontend code with `docker compose up --build`.
++
++### Option B: Native (no Docker)
++
++See [`architecture.md`](./architecture.md) §8 for full prerequisites (JDK, Maven, Node, Postgres, Tesseract).
++
+ ### Backend Setup
+ 
+ ```bash
+diff --git a/architecture.md b/architecture.md
+index 5150a9b..009677f 100644
+--- a/architecture.md
++++ b/architecture.md
+@@ -265,9 +265,26 @@ Tess4J bundles JNA bindings to the native Tesseract library, but the native Tess
+ - **Postman or Thunder Client** — for testing endpoints; pair with **springdoc-openapi** (optional dependency) to get an auto-generated Swagger UI similar to FastAPI's `/docs`
+ 
+ ### Optional
+-- **Docker Desktop** — run Postgres (and later Kafka/RabbitMQ, if the stretch job-queue feature is built) in containers instead of native installs
+ - **pgAdmin or TablePlus** — GUI for inspecting Postgres data during development
+ 
++## 8.1 Running Everything via Docker Compose (recommended)
++
++Rather than installing Java/Maven/Node/Postgres/Tesseract natively, the whole stack (Postgres, backend, frontend) can be run with a single command via the root-level `docker-compose.yml`:
++
++```bash
++cp .env.example .env      # fill in ANTHROPIC_API_KEY at minimum
++docker compose up --build
++```
++
++This starts:
++- `db` — Postgres 16, with a named volume (`docket_pgdata`) so data survives restarts
++- `backend` — built from `backend/Dockerfile` (multi-stage: Maven build → Temurin JRE runtime, with the native Tesseract engine installed for OCR), on `http://localhost:8080`
++- `frontend` — built from `frontend/Dockerfile` (multi-stage: `npm run build` → served by nginx), on `http://localhost:5173`
++
++The backend reads `SPRING_DATASOURCE_URL`/`_USERNAME`/`_PASSWORD`, `JWT_SECRET`, and `ANTHROPIC_API_KEY` from environment variables (see `backend/src/main/resources/application.yml` — all have safe local-dev defaults so `mvn spring-boot:run` against a local Postgres still works unchanged). The frontend's `VITE_API_BASE_URL` is a **build-time** arg (Vite bakes env vars into the JS bundle), passed through from `.env` via `docker-compose.yml`.
++
++Native installs (Java, Maven, Node, Postgres, Tesseract) are still documented above and remain fully supported — Docker is an alternative, not a replacement, for local development.
++
+ ### Sanity Check
+ Run these after installing everything to confirm the environment is ready:
+ 
+diff --git a/backend/.dockerignore b/backend/.dockerignore
+new file mode 100644
+index 0000000..5808490
+--- /dev/null
++++ b/backend/.dockerignore
+@@ -0,0 +1,8 @@
++target/
++.idea/
++*.iml
++.vscode/
++src/main/resources/application-dev.yml
++.env
++.env.*
++!.env.example
+diff --git a/backend/Dockerfile b/backend/Dockerfile
+new file mode 100644
+index 0000000..8549288
+--- /dev/null
++++ b/backend/Dockerfile
+@@ -0,0 +1,31 @@
++# --- Build stage ---
++FROM eclipse-temurin:25-jdk AS build
++WORKDIR /app
++
++# Copy Maven wrapper + pom first so dependency layer is cached separately from source changes
++COPY mvnw .
++COPY .mvn .mvn
++COPY pom.xml .
++RUN chmod +x mvnw && ./mvnw -B dependency:go-offline || true
++
++COPY src src
++RUN ./mvnw -B clean package -DskipTests
++
++# --- Run stage ---
++FROM eclipse-temurin:25-jre
++WORKDIR /app
++
++# Native Tesseract engine + English trained data, required by Tess4J (see architecture.md §8)
++RUN apt-get update \
++    && apt-get install -y --no-install-recommends tesseract-ocr \
++    && rm -rf /var/lib/apt/lists/*
++ENV TESSDATA_PREFIX=/usr/share/tesseract-ocr/5/tessdata
++
++# Run as non-root
++RUN groupadd --system docket && useradd --system --gid docket docket
++COPY --from=build /app/target/*.jar app.jar
++RUN chown docket:docket app.jar
++USER docket
++
++EXPOSE 8080
++ENTRYPOINT ["java", "-jar", "app.jar"]
+diff --git a/backend/src/main/resources/application.yml b/backend/src/main/resources/application.yml
+index 4e0b889..bbd0d42 100644
+--- a/backend/src/main/resources/application.yml
++++ b/backend/src/main/resources/application.yml
+@@ -1,8 +1,8 @@
+ spring:
+   datasource:
+-    url: jdbc:postgresql://localhost:5432/docket
+-    username: postgres
+-    password: root
++    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/docket}
++    username: ${SPRING_DATASOURCE_USERNAME:postgres}
++    password: ${SPRING_DATASOURCE_PASSWORD:root}
+   jpa:
+     hibernate:
+       ddl-auto: none
+@@ -13,5 +13,9 @@ spring:
+ flyway:
+   enabled: true
+   locations: classpath:db/migration
++jwt:
++  secret: ${JWT_SECRET:dev-only-insecure-secret-change-me}
++anthropic:
++  api-key: ${ANTHROPIC_API_KEY:}
+ server:
+   port: 8080
+diff --git a/docker-compose.yml b/docker-compose.yml
+new file mode 100644
+index 0000000..23280a8
+--- /dev/null
++++ b/docker-compose.yml
+@@ -0,0 +1,48 @@
++services:
++  db:
++    image: postgres:16-alpine
++    restart: unless-stopped
++    environment:
++      POSTGRES_DB: docket
++      POSTGRES_USER: ${POSTGRES_USER:-postgres}
++      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-root}
++    ports:
++      - "5432:5432"
++    volumes:
++      - docket_pgdata:/var/lib/postgresql/data
++    healthcheck:
++      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d docket"]
++      interval: 5s
++      timeout: 5s
++      retries: 10
++
++  backend:
++    build:
++      context: ./backend
++    restart: unless-stopped
++    depends_on:
++      db:
++        condition: service_healthy
++    environment:
++      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/docket
++      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-postgres}
++      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-root}
++      JWT_SECRET: ${JWT_SECRET:-dev-only-insecure-secret-change-me}
++      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
++    ports:
++      - "8080:8080"
++
++  frontend:
++    build:
++      context: ./frontend
++      args:
++        # Baked in at build time — browser talks to the backend directly on localhost:8080
++        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost:8080}
++    restart: unless-stopped
++    depends_on:
++      - backend
++    ports:
++      - "5173:80"
++
++volumes:
++  docket_pgdata:
+diff --git a/frontend/.dockerignore b/frontend/.dockerignore
+new file mode 100644
+index 0000000..c744b43
+--- /dev/null
++++ b/frontend/.dockerignore
+@@ -0,0 +1,5 @@
++node_modules/
++dist/
++.env
++.env.*
++!.env.example
+diff --git a/frontend/Dockerfile b/frontend/Dockerfile
+new file mode 100644
+index 0000000..5d35790
+--- /dev/null
++++ b/frontend/Dockerfile
+@@ -0,0 +1,22 @@
++# --- Build stage ---
++FROM node:20-alpine AS build
++WORKDIR /app
++
++COPY package.json package-lock.json ./
++RUN npm ci
++
++COPY . .
++
++# Baked into the JS bundle at build time (Vite env vars are compile-time, not runtime)
++ARG VITE_API_BASE_URL=http://localhost:8080
++ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
++
++RUN npm run build
++
++# --- Run stage ---
++FROM nginx:1.27-alpine
++COPY --from=build /app/dist /usr/share/nginx/html
++COPY nginx.conf /etc/nginx/conf.d/default.conf
++
++EXPOSE 80
++CMD ["nginx", "-g", "daemon off;"]
+diff --git a/frontend/nginx.conf b/frontend/nginx.conf
+new file mode 100644
+index 0000000..76003b6
+--- /dev/null
++++ b/frontend/nginx.conf
+@@ -0,0 +1,16 @@
++server {
++    listen 80;
++    server_name _;
++    root /usr/share/nginx/html;
++    index index.html;
++
++    # React Router: fall back to index.html for any non-file route
++    location / {
++        try_files $uri $uri/ /index.html;
++    }
++
++    location /assets/ {
++        expires 1y;
++        add_header Cache-Control "public, immutable";
++    }
++}
+diff --git a/memory.md b/memory.md
+index 8d8f3be..ee680a6 100644
+--- a/memory.md
++++ b/memory.md
+@@ -18,7 +18,7 @@
+ 
+ - **Active Phase:** Phase 1 — Auth & Workspace (in progress)
+ - **Last Updated:** 2026-08-05
+-- **Overall Progress:** ~15% — Phase 0 complete; frontend/backend integration verified, PostgreSQL connection confirmed, and Flyway migration applied cleanly
++- **Overall Progress:** ~15% — Phase 0 complete; frontend/backend integration verified, PostgreSQL connection confirmed, and Flyway migration applied cleanly. Docker Compose setup added this session (tooling, not a phase deliverable) so the stack can be run with one command.
+ 
+ ## Completed
+ 
+@@ -32,6 +32,7 @@
+ - [x] `GET /api/health` endpoint built (`HealthController.java`)
+ - [x] First Flyway migration written (`V1__init_schema.sql` — `workspaces`, `users` tables)
+ - [x] Basic `SecurityConfig.java` written (permits `/api/health`, `/api/auth/**`; CORS fixed — see Known Issues)
++- [x] Dockerized the whole stack: `backend/Dockerfile` (Maven build → Temurin 25 JRE runtime, native Tesseract installed), `frontend/Dockerfile` (npm build → nginx), root `docker-compose.yml` (db + backend + frontend), root `.env.example`
+ 
+ ## In Progress
+ 
+@@ -58,6 +59,9 @@
+ ## Known Issues / Gotchas
+ 
+ - **Flyway warning on Postgres 18.4.** The backend startup log shows `PostgreSQL 18.4` is newer than the version tested by Flyway, but `V1__init_schema.sql` was still validated successfully and the schema is up to date.
++- **Docker Compose build not yet run/verified this session.** `docker-compose.yml`, `backend/Dockerfile`, and `frontend/Dockerfile` were written and the compose YAML was syntax-checked, but `docker compose up --build` has NOT actually been executed against Docker Desktop yet (no Docker daemon available in this session's environment). Next session with Docker Desktop running should do `docker compose up --build` and confirm all three containers come up healthy and the frontend can reach the backend health check.
++- **`TESSDATA_PREFIX` path in `backend/Dockerfile` (`/usr/share/tesseract-ocr/5/tessdata`) is a best guess** based on the Debian `tesseract-ocr` apt package layout — not yet verified since OCR (Phase 3) isn't built yet. Confirm/fix this path when Phase 3 lands and Tess4J is actually wired up, by shelling into the built container (`docker compose exec backend sh` — note the run-stage image doesn't have a shell by default beyond what's in Temurin's base) or checking `dpkg -L tesseract-ocr` during the image build.
++- **Frontend's `VITE_API_BASE_URL` is baked in at Docker build time**, not read at container runtime (Vite env vars are compile-time). If the backend's externally-reachable URL changes, the frontend image must be rebuilt (`docker compose up --build frontend`), not just restarted.
+ 
+ ## Ideas / Not Yet Approved
+ 
+@@ -68,6 +72,12 @@
+ ## Commands Reference
+ 
+ ```bash
++# --- Docker (recommended) ---
++cp .env.example .env    # set ANTHROPIC_API_KEY at minimum
++docker compose up --build
++# frontend: http://localhost:5173, backend: http://localhost:8080, db: localhost:5432
++
++# --- Native (no Docker) ---
+ # Backend
+ cd backend
+ ./mvnw spring-boot:run
+@@ -116,4 +126,15 @@ npm run dev
+ - Files touched: `AGENTS.md`, `backend/src/main/java/com/docket/config/SecurityConfig.java`, `memory.md`
+ - Tested/confirmed: Backend health endpoint correctness; CORS fix reviewed; PostgreSQL connection and Flyway migration verification from startup logs. Frontend browser check already showed `Backend health check: OK`.
+ - Still untested / follow-up: none for Phase 0; Phase 1 work begins next.
+-- Next session should: implement auth and workspace support, starting with the backend signup/login flow and frontend login/signup pages.
+\ No newline at end of file
++- Next session should: implement auth and workspace support, starting with the backend signup/login flow and frontend login/signup pages.
++
++### Session 5 — 2026-08-05
++- User requested: dockerize the project so backend and frontend don't need to be run/managed separately, given Docker Desktop 29.5.3 is installed locally.
++- Followed AGENTS.md Session Start Protocol: read memory.md, phases.md (implicitly — no phase conflict, this is infra/tooling not app scope), rules.md, architecture.md before making changes; sanity-checked the actual repo (cloned fresh from `main`) against memory.md's claims and found them accurate.
++- Added: `backend/Dockerfile` (multi-stage — Maven+Temurin 25 JDK build stage, Temurin 25 JRE run stage with native `tesseract-ocr` installed for future Phase 3 OCR work, non-root user), `backend/.dockerignore`; `frontend/Dockerfile` (multi-stage — Node 20 build stage running `npm run build` with `VITE_API_BASE_URL` as a build arg, nginx 1.27 run stage), `frontend/nginx.conf` (SPA fallback routing), `frontend/.dockerignore`; root `docker-compose.yml` (services: `db` Postgres 16 with healthcheck + named volume, `backend`, `frontend`; backend waits on db healthcheck); root `.env.example`.
++- Parameterized `backend/src/main/resources/application.yml` datasource/jwt/anthropic values with `${VAR:default}` env-var syntax so the same jar/image works both natively (`mvn spring-boot:run`, defaults unchanged) and in Docker Compose (env vars injected by compose) — no more need for a separate `application-dev.yml` copy step when using Docker.
++- Confirmed no code changes needed to `SecurityConfig.java` — its CORS allow-list already targets `http://localhost:5173`, which is exactly where the frontend container's nginx is published.
++- Updated docs per AGENTS.md §6.2: `architecture.md` §8.1 (new — Docker Compose usage), `README.md` (Getting Started now has Option A Docker / Option B native, Prerequisites section points to Docker as the fast path, Project Structure tree lists the new Docker files), `rules.md` §2 (Docker/Compose added to approved tooling list, explicitly scoped as tooling not runtime stack), `memory.md` (this entry + Completed + Known Issues + Commands Reference).
++- Tested/confirmed: `docker-compose.yml` is valid YAML (parsed with PyYAML). Dockerfiles were written carefully against the actual `pom.xml` (Java 25), `package.json` (Vite 8), and existing config files, but **not built or run** — no Docker daemon available in this session's sandboxed environment.
++- Still untested / follow-up: actually run `docker compose up --build` on the user's machine (Docker Desktop 29.5.3) and confirm all three services come up and the frontend reaches the backend; verify the `TESSDATA_PREFIX` path guess in `backend/Dockerfile` once Phase 3 (OCR) is built.
++- Next session should: continue Phase 1 (auth/workspace) as previously planned — Docker setup was a tooling request, not a phase-scope change. If the user reports a Docker Compose issue first, debug that before resuming Phase 1.
+\ No newline at end of file
+diff --git a/rules.md b/rules.md
+index fa9762b..91b9d80 100644
+--- a/rules.md
++++ b/rules.md
+@@ -25,6 +25,7 @@
+ - Auth: Spring Security + jjwt (JWT), `BCryptPasswordEncoder`
+ - LLM: Anthropic API called via Spring's `RestClient`/`WebClient` (no official Java SDK — use a thin typed wrapper class, see architecture.md §3.6)
+ - Testing: JUnit 5, Spring Boot Test, Mockito
++- Local dev/orchestration: Docker + Docker Compose (see `docker-compose.yml`, `backend/Dockerfile`, `frontend/Dockerfile`) — this is tooling, not application scope, so it doesn't change the runtime stack above
+ 
+ **Do not** add: a second frontend framework, a second backend language/framework, a second database, a message queue (Kafka/RabbitMQ), or any paid third-party API (cloud OCR, cloud NLP) unless explicitly requested and reflected in architecture.md first.
+ 
