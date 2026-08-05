@@ -54,7 +54,7 @@ If a task would require violating any of the above to "get it working faster," s
 
 ## 4. Coding Boundaries (recap — full detail in `rules.md`)
 
-- Stick to the approved stack: Java 17+/Spring Boot backend, React/Vite/Tailwind frontend, PostgreSQL, Tess4J/PDFBox for OCR, Claude via the Anthropic API. Do not introduce a second backend language, a second database, or a queue/broker outside of Phase 10 stretch work.
+- Stick to the approved stack: Java 17+/Spring Boot backend, React/Vite/Tailwind frontend, PostgreSQL, Tess4J/PDFBox for OCR, Google Gemini API for LLM calls. Do not introduce a second backend language, a second database, or a queue/broker outside of Phase 10 stretch work.
 - Controllers stay thin; business logic lives in services; repositories only do data access.
 - Every new REST endpoint gets a short Javadoc comment (purpose, input, output).
 - Follow the existing package layout under `backend/src/main/java/com/docket/...` and `frontend/src/...` — don't restructure folders without updating `architecture.md` first.

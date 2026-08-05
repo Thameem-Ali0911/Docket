@@ -55,6 +55,7 @@
 | Jackson + Bean Validation for both API and LLM JSON output validation | One validation pattern across the backend instead of a second library | architecture.md §3.6, §7 |
 | Synchronous processing for MVP (no queue) | Avoids premature infra complexity; queue (Kafka/RabbitMQ) is a stretch goal only | architecture.md §3.4, phases.md Phase 10 |
 | Tess4J over cloud OCR APIs | Free, no per-page cost, sufficient for MVP's "clean/typed documents" scope | architecture.md §7 |
+| Switched LLM provider from Anthropic (Claude) to Google Gemini | User has a Gemini API key, not an Anthropic one; no LLM code was written yet (Phase 4 not started), so this was a docs/config-only rename with no migration cost | architecture.md §3.6, prd.md, rules.md §2, phases.md Phase 4 — see Session 6 |
 
 ## Known Issues / Gotchas
 
@@ -73,7 +74,7 @@
 
 ```bash
 # --- Docker (recommended) ---
-cp .env.example .env    # set ANTHROPIC_API_KEY at minimum
+cp .env.example .env    # set GEMINI_API_KEY at minimum
 docker compose up --build
 # frontend: http://localhost:5173, backend: http://localhost:8080, db: localhost:5432
 
@@ -138,3 +139,13 @@ npm run dev
 - Tested/confirmed: `docker-compose.yml` is valid YAML (parsed with PyYAML). Dockerfiles were written carefully against the actual `pom.xml` (Java 25), `package.json` (Vite 8), and existing config files, but **not built or run** — no Docker daemon available in this session's sandboxed environment.
 - Still untested / follow-up: actually run `docker compose up --build` on the user's machine (Docker Desktop 29.5.3) and confirm all three services come up and the frontend reaches the backend; verify the `TESSDATA_PREFIX` path guess in `backend/Dockerfile` once Phase 3 (OCR) is built.
 - Next session should: continue Phase 1 (auth/workspace) as previously planned — Docker setup was a tooling request, not a phase-scope change. If the user reports a Docker Compose issue first, debug that before resuming Phase 1.
+
+### Session 6 — 2026-08-05
+- User doesn't have an Anthropic API key, has a Google Gemini one instead — requested the LLM provider be swapped from Anthropic (Claude) to Google Gemini throughout the whole project.
+- Confirmed via search that **no application code referenced Anthropic/Claude yet** — Phase 4 (LLM Field Extraction) hasn't started, so this was a pure docs/config rename, not a code migration. No `.java` files touched.
+- Renamed `ANTHROPIC_API_KEY` → `GEMINI_API_KEY` everywhere it appeared: `backend/src/main/resources/application.yml` (now a `gemini:` config block, `${GEMINI_API_KEY:}`), `backend/src/main/resources/application-dev.yml.example`, `docker-compose.yml`, root `.env.example` (comment now points to aistudio.google.com/apikey instead of console.anthropic.com).
+- Updated prose/planning docs: `README.md` (tech stack table, prerequisites, env var table, setup comments), `architecture.md` (system diagram, app flow steps, §3.6 LLM integration section, folder tree comments — `AnthropicClient.java` renamed to `GeminiClient.java` in the planned layout, prerequisites §8, rationale §9), `rules.md` §2 approved stack and §3 data-sharing rule, `prd.md` §technical notes, `phases.md` Phase 4 goal + task (planned class name `AnthropicClient` → `GeminiClient`), `AGENTS.md` §4 approved stack line.
+- **Deliberately left untouched:** every reference to "Claude" meaning the AI coding assistant itself (e.g. `AGENTS.md`'s audience line, `rules.md`'s "every AI coding session (Claude Code, Cursor, ChatGPT...)" line) — those describe the tool being used to work on this repo, not the app's LLM provider, and swapping those would be a mistake.
+- Since no backend code exists yet for the LLM client, there's nothing to functionally test this session — when Phase 4 starts, the actual Gemini REST API shape (endpoint, auth header, request/response JSON) will need to be looked up fresh rather than assumed, since it differs from Anthropic's `/v1/messages` shape referenced in the old architecture.md text.
+- Files touched: `README.md`, `architecture.md`, `rules.md`, `prd.md`, `phases.md`, `AGENTS.md`, `memory.md`, `backend/src/main/resources/application.yml`, `backend/src/main/resources/application-dev.yml.example`, `docker-compose.yml`, `.env.example`.
+- Next session should: continue Phase 1 (auth/workspace) — the provider swap doesn't change phase scope. When Phase 4 (LLM extraction) actually starts, write `GeminiClient.java` against Gemini's real REST API (`generativelanguage.googleapis.com`), not by assuming it mirrors Anthropic's request/response shape.

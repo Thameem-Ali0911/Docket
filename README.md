@@ -46,7 +46,7 @@ The MVP is intentionally scoped to **three document types**: Contracts, Invoices
 | Backend | Java 17+, Spring Boot 3.x (Spring Web, Spring Data JPA, Spring Security, Flyway, Bean Validation, Jackson) |
 | Database | PostgreSQL |
 | OCR / PDF | Tess4J (Tesseract wrapper), Apache PDFBox |
-| AI / LLM | Anthropic API (Claude) — called via a thin Spring `RestClient`/`WebClient` wrapper |
+| AI / LLM | Google Gemini API — called via a thin Spring `RestClient`/`WebClient` wrapper |
 | Auth | Spring Security, JWT (jjwt), BCrypt |
 | Build Tool | Maven |
 | Deployment (demo) | Vercel/Netlify (frontend), Render/Railway (backend), Supabase/Neon (DB) |
@@ -65,7 +65,7 @@ docket/
 ├── memory.md              # Running project log / session history
 ├── README.md              # You are here
 ├── docker-compose.yml     # Runs db + backend + frontend together (`docker compose up --build`)
-├── .env.example           # Compose-level env vars (Postgres creds, JWT secret, Anthropic key)
+├── .env.example           # Compose-level env vars (Postgres creds, JWT secret, Gemini key)
 │
 ├── frontend/
 │   ├── Dockerfile         # Multi-stage: npm run build → served by nginx
@@ -83,7 +83,7 @@ docket/
         ├── repository/    # Spring Data JPA repositories
         ├── dto/           # Request/response + LLM-output DTOs
         ├── service/       # OCR, extraction, summarize, anomaly, storage services
-        ├── prompt/        # Claude prompt builders, one per responsibility
+        ├── prompt/        # Gemini prompt builders, one per responsibility
         ├── security/      # JWT service + auth filter
         └── exception/     # Global exception handling
 ```
@@ -104,7 +104,7 @@ Install these before running the project locally without Docker:
   - Windows: UB-Mannheim Tesseract build
   - Mac: `brew install tesseract`
   - Linux: `sudo apt install tesseract-ocr libtesseract-dev`
-- **Anthropic API key** — from [console.anthropic.com](https://console.anthropic.com)
+- **Google Gemini API key** — from [aistudio.google.com/apikey](https://aistudio.google.com/apikey)
 - **Git**
 
 Optional: Docker Desktop (containerized Postgres), IntelliJ IDEA (recommended IDE for the backend), Postman/Thunder Client.
@@ -119,7 +119,7 @@ Requires [Docker Desktop](https://www.docker.com/products/docker-desktop/).
 
 ```bash
 cp .env.example .env
-# edit .env — set ANTHROPIC_API_KEY at minimum; POSTGRES_PASSWORD/JWT_SECRET have dev defaults
+# edit .env — set GEMINI_API_KEY at minimum; POSTGRES_PASSWORD/JWT_SECRET have dev defaults
 
 docker compose up --build
 ```
@@ -145,7 +145,7 @@ cd backend
 
 # Configure environment (see Environment Variables below)
 cp src/main/resources/application-dev.yml.example src/main/resources/application-dev.yml
-# edit application-dev.yml with your DB credentials and ANTHROPIC_API_KEY
+# edit application-dev.yml with your DB credentials and GEMINI_API_KEY
 
 # Run (Flyway migrations run automatically on startup)
 mvn spring-boot:run
@@ -178,7 +178,7 @@ Frontend runs on `http://localhost:5173` by default (Vite's default port).
 | `SPRING_DATASOURCE_URL` | PostgreSQL JDBC connection string |
 | `SPRING_DATASOURCE_USERNAME` | DB username |
 | `SPRING_DATASOURCE_PASSWORD` | DB password |
-| `ANTHROPIC_API_KEY` | Your Claude API key |
+| `GEMINI_API_KEY` | Your Google Gemini API key |
 | `JWT_SECRET` | Secret used to sign JWTs |
 | `TESSDATA_PREFIX` | Path to the folder containing `tessdata/` |
 

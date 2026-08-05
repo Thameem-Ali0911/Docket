@@ -107,7 +107,7 @@ Since this is an academic project, "success" is measured by demo-ability and tec
 ## 8. Assumptions & Constraints
 
 - Single developer (student) building over ~1 academic year with AI pair-programming assistance
-- LLM calls (extraction, summarization, anomaly reasoning) will use the Anthropic API (Claude)
+- LLM calls (extraction, summarization, anomaly reasoning) will use the Google Gemini API
 - OCR will use an open-source or free-tier library (see architecture.md for exact choice)
 - Deployment target: free/low-cost tiers (Vercel/Render/Railway + a managed Postgres free tier) since this is an academic, not commercial, deployment
 - Sample/test documents will be synthetic or anonymized public templates — no real client data

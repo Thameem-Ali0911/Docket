@@ -23,7 +23,7 @@
 - PDF parsing: Apache PDFBox
 - DB: PostgreSQL (via Spring Data JPA / JDBC driver)
 - Auth: Spring Security + jjwt (JWT), `BCryptPasswordEncoder`
-- LLM: Anthropic API called via Spring's `RestClient`/`WebClient` (no official Java SDK — use a thin typed wrapper class, see architecture.md §3.6)
+- LLM: Google Gemini API called via Spring's `RestClient`/`WebClient` (no official Java SDK dependency added — use a thin typed wrapper class, see architecture.md §3.6)
 - Testing: JUnit 5, Spring Boot Test, Mockito
 - Local dev/orchestration: Docker + Docker Compose (see `docker-compose.yml`, `backend/Dockerfile`, `frontend/Dockerfile`) — this is tooling, not application scope, so it doesn't change the runtime stack above
 
@@ -35,7 +35,7 @@
 - Extraction prompts must **instruct the model to return strict JSON only**, matching a predefined schema per document type. Always deserialize the JSON response into a dedicated **Java DTO/record** (e.g., `InvoiceExtractionDto`, `ContractExtractionDto`, `ResumeExtractionDto`) via Jackson and validate it with **Bean Validation (`@Valid`)** before saving to the DB. If deserialization or validation fails, mark the document `failed` and store the raw error — do not silently guess/repair the data.
 - Extraction must be **grounded in the document text** — the prompt must explicitly instruct: "If a field cannot be found in the text, return null. Do not guess or fabricate values." This is critical for a document-intelligence tool; fabricated data is worse than missing data.
 - Anomaly/comparison prompts must reference **both** the new document's extracted text and the stored template's text — never rely on the model's general knowledge of "typical contracts."
-- Never send raw uploaded documents to any third-party service other than the approved OCR library and the Anthropic API. No other data sharing.
+- Never send raw uploaded documents to any third-party service other than the approved OCR library and the Google Gemini API. No other data sharing.
 - Do not log full document contents or extracted personal data (names, salaries, contract values) to console/logs in a way that would persist in plaintext logs beyond debugging. Redact where practical.
 
 ## 4. Error Handling Standards

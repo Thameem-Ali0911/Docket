@@ -34,8 +34,8 @@
         │              Document Processing Pipeline (async job)      │
         │                                                            │
         │  1. OCR (if scanned image/PDF) → raw text                  │
-        │  2. LLM Extraction call (Claude) → structured JSON          │
-        │  3. LLM Summarization call (Claude) → summary text          │
+        │  2. LLM Extraction call (Gemini) → structured JSON          │
+        │  3. LLM Summarization call (Gemini) → summary text          │
         │  4. Template Diff/Anomaly check → flags                    │
         │  5. Persist results to DB                                  │
         └────────────────────────────────────────────────────────────┘
@@ -49,8 +49,8 @@
 4. Backend enqueues a processing job (see 3.4 for queue choice)
 5. **Processing worker**:
    a. Detects if OCR is needed (scanned image / non-text PDF) → runs OCR → raw text
-   b. Sends raw text to Claude with a document-type-specific extraction prompt → structured JSON
-   c. Sends raw text to Claude for a short summary
+   b. Sends raw text to Gemini with a document-type-specific extraction prompt → structured JSON
+   c. Sends raw text to Gemini for a short summary
    d. If a "standard template" exists for that workspace + doc type, runs a comparison prompt against it → produces anomaly flags
    e. Saves everything; sets document status to `processed` or `failed`
 6. **Frontend polls / re-fetches** document status → renders extracted fields, summary, and flags
@@ -89,7 +89,7 @@
 - **Apache PDFBox** to extract text directly from digital (non-scanned) PDFs before falling back to OCR, and to rasterize PDF pages to images when OCR fallback is needed
 
 ### 3.6 AI / LLM Layer
-- **Anthropic API (Claude)** called via plain HTTP using **Spring's `RestClient`/`WebClient`** (no official Anthropic Java SDK — call the REST API directly with a small typed client wrapper class), for:
+- **Google Gemini API** called via plain HTTP using **Spring's `RestClient`/`WebClient`** (no official Google Gen AI Java SDK dependency added — call the REST API directly with a small typed client wrapper class), for:
   - Structured field extraction (prompted to return strict JSON per document type)
   - Summarization
   - Template-comparison / anomaly reasoning
@@ -109,7 +109,7 @@
 - **Frontend:** Vercel or Netlify (free tier)
 - **Backend:** Render or Railway (free tier) — both support Java/Spring Boot via a Docker build, or a plain `java -jar` start command
 - **DB:** Supabase/Neon free tier
-- **Env config:** `application.yml` / `application-{profile}.yml` with environment variable placeholders (`${ANTHROPIC_API_KEY}`), never committing real secrets (see rules.md)
+- **Env config:** `application.yml` / `application-{profile}.yml` with environment variable placeholders (`${GEMINI_API_KEY}`), never committing real secrets (see rules.md)
 
 ## 4. Folder & File Structure
 
@@ -154,7 +154,7 @@ docket/
 │   │   │   │   ├── DocketApplication.java        # Spring Boot entrypoint
 │   │   │   │   ├── config/
 │   │   │   │   │   ├── SecurityConfig.java        # Spring Security + JWT filter chain
-│   │   │   │   │   └── WebClientConfig.java       # RestClient/WebClient bean for Anthropic API
+│   │   │   │   │   └── WebClientConfig.java       # RestClient/WebClient bean for Gemini API
 │   │   │   │   ├── controller/
 │   │   │   │   │   ├── AuthController.java        # /api/auth/*
 │   │   │   │   │   ├── DocumentController.java    # /api/documents/*
@@ -179,11 +179,11 @@ docket/
 │   │   │   │   │   └── ResumeExtractionDto.java
 │   │   │   │   ├── service/
 │   │   │   │   │   ├── OcrService.java              # Tess4J + PDFBox logic
-│   │   │   │   │   ├── ExtractionService.java        # Claude call: extract fields
-│   │   │   │   │   ├── SummarizeService.java         # Claude call: summarize
-│   │   │   │   │   ├── AnomalyService.java           # Claude call: compare vs template
+│   │   │   │   │   ├── ExtractionService.java        # Gemini call: extract fields
+│   │   │   │   │   ├── SummarizeService.java         # Gemini call: summarize
+│   │   │   │   │   ├── AnomalyService.java           # Gemini call: compare vs template
 │   │   │   │   │   ├── StorageService.java           # file upload/retrieve (local disk / S3)
-│   │   │   │   │   └── AnthropicClient.java          # thin wrapper around Claude REST API
+│   │   │   │   │   └── GeminiClient.java             # thin wrapper around Gemini REST API
 │   │   │   │   ├── prompt/
 │   │   │   │   │   ├── ExtractInvoicePrompt.java
 │   │   │   │   │   ├── ExtractContractPrompt.java
@@ -257,7 +257,7 @@ Tess4J bundles JNA bindings to the native Tesseract library, but the native Tess
 - **Apache PDFBox** is a pure-Java library (added via Maven/Gradle dependency) — no separate system install needed for PDF text extraction/rasterization
 
 ### API Access
-- **Anthropic API key** — sign up at console.anthropic.com, generate a key, place it in `backend/src/main/resources/application-dev.yml` (or as an environment variable referenced via `${ANTHROPIC_API_KEY}`). Never commit real keys — keep only placeholders in any committed `application.yml` (see rules.md §5).
+- **Google Gemini API key** — sign up at aistudio.google.com/apikey, generate a key, place it in `backend/src/main/resources/application-dev.yml` (or as an environment variable referenced via `${GEMINI_API_KEY}`). Never commit real keys — keep only placeholders in any committed `application.yml` (see rules.md §5).
 
 ### Editor / Tooling
 - **IntelliJ IDEA** (Community or Ultimate) — recommended for Spring Boot: built-in Spring Initializr, run configs, and JPA/SQL tooling. VS Code with the "Extension Pack for Java" + "Spring Boot Extension Pack" also works.
@@ -272,7 +272,7 @@ Tess4J bundles JNA bindings to the native Tesseract library, but the native Tess
 Rather than installing Java/Maven/Node/Postgres/Tesseract natively, the whole stack (Postgres, backend, frontend) can be run with a single command via the root-level `docker-compose.yml`:
 
 ```bash
-cp .env.example .env      # fill in ANTHROPIC_API_KEY at minimum
+cp .env.example .env      # fill in GEMINI_API_KEY at minimum
 docker compose up --build
 ```
 
@@ -281,7 +281,7 @@ This starts:
 - `backend` — built from `backend/Dockerfile` (multi-stage: Maven build → Temurin JRE runtime, with the native Tesseract engine installed for OCR), on `http://localhost:8080`
 - `frontend` — built from `frontend/Dockerfile` (multi-stage: `npm run build` → served by nginx), on `http://localhost:5173`
 
-The backend reads `SPRING_DATASOURCE_URL`/`_USERNAME`/`_PASSWORD`, `JWT_SECRET`, and `ANTHROPIC_API_KEY` from environment variables (see `backend/src/main/resources/application.yml` — all have safe local-dev defaults so `mvn spring-boot:run` against a local Postgres still works unchanged). The frontend's `VITE_API_BASE_URL` is a **build-time** arg (Vite bakes env vars into the JS bundle), passed through from `.env` via `docker-compose.yml`.
+The backend reads `SPRING_DATASOURCE_URL`/`_USERNAME`/`_PASSWORD`, `JWT_SECRET`, and `GEMINI_API_KEY` from environment variables (see `backend/src/main/resources/application.yml` — all have safe local-dev defaults so `mvn spring-boot:run` against a local Postgres still works unchanged). The frontend's `VITE_API_BASE_URL` is a **build-time** arg (Vite bakes env vars into the JS bundle), passed through from `.env` via `docker-compose.yml`.
 
 Native installs (Java, Maven, Node, Postgres, Tesseract) are still documented above and remain fully supported — Docker is an alternative, not a replacement, for local development.
 
@@ -305,7 +305,7 @@ If any of these fail, resolve it before starting Phase 0 — OCR (Phase 3) will 
 
 - **Java + Spring Boot over Python/Node**: Spring Boot is a mature, heavily-documented enterprise framework with strong typing, a huge ecosystem, and is a natural fit for a student more comfortable in Java. Spring Data JPA, Spring Security, and Flyway cover ORM, auth, and migrations as first-class, well-integrated pieces rather than bolted-on libraries.
 - **Postgres over MongoDB**: extracted fields, flags, and templates are naturally relational (a document has many fields, a workspace has one template per type) — a relational model avoids messy nested-document queries.
-- **Claude for extraction over a classic NLP/regex pipeline**: contract/resume documents are too varied in language for regex; an LLM with a strict JSON-output prompt generalizes far better and is realistic for a document-intelligence SaaS in 2026.
-- **Jackson + Bean Validation for LLM output**: since Spring already uses Jackson for JSON (de)serialization and Bean Validation for request validation, reusing both to validate Claude's JSON extraction output keeps one consistent pattern across the backend instead of introducing a new library just for this purpose.
+- **Gemini for extraction over a classic NLP/regex pipeline**: contract/resume documents are too varied in language for regex; an LLM with a strict JSON-output prompt generalizes far better and is realistic for a document-intelligence SaaS in 2026.
+- **Jackson + Bean Validation for LLM output**: since Spring already uses Jackson for JSON (de)serialization and Bean Validation for request validation, reusing both to validate Gemini's JSON extraction output keeps one consistent pattern across the backend instead of introducing a new library just for this purpose.
 - **Synchronous processing for MVP**: a queue adds real infrastructure complexity (Kafka/RabbitMQ, consumers) that isn't worth it until the core extraction quality is proven. Introduce it only as a stretch goal.
 - **Tess4J over cloud OCR APIs**: free, no per-page cost, good enough for typed/clean documents which is the MVP's stated scope.

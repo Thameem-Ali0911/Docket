@@ -15,5 +15,5 @@ flyway:
   locations: classpath:db/migration
 jwt:
   secret: your-jwt-secret-here
-anthropic:
-  api-key: your-anthropic-api-key-here
+gemini:
+  api-key: your-gemini-api-key-here

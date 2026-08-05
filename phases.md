@@ -57,10 +57,10 @@
 ---
 
 ## Phase 4 — LLM Field Extraction (Invoice)
-**Goal:** Structured invoice fields (vendor, invoice #, date, line items, total) are extracted via Claude and shown in the UI.
+**Goal:** Structured invoice fields (vendor, invoice #, date, line items, total) are extracted via Gemini and shown in the UI.
 
 - Build `prompt/ExtractInvoicePrompt.java` — strict JSON-only output, grounded-in-text instruction (see rules.md §3)
-- Build `service/ExtractionService.java` to call Claude via `AnthropicClient`, deserialize with Jackson into `InvoiceExtractionDto`, validate with `@Valid`, persist to `extractions` table
+- Build `service/ExtractionService.java` to call Gemini via `GeminiClient`, deserialize with Jackson into `InvoiceExtractionDto`, validate with `@Valid`, persist to `extractions` table
 - Frontend: `DocumentDetail.jsx` shows extracted fields in a clean table next to a preview of the original file
 
 **Definition of Done:** Uploading a sample invoice produces correct, review-able structured fields for at least 8/10 test invoices.
