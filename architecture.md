@@ -265,8 +265,25 @@ Tess4J bundles JNA bindings to the native Tesseract library, but the native Tess
 - **Postman or Thunder Client** — for testing endpoints; pair with **springdoc-openapi** (optional dependency) to get an auto-generated Swagger UI similar to FastAPI's `/docs`
 
 ### Optional
-- **Docker Desktop** — run Postgres (and later Kafka/RabbitMQ, if the stretch job-queue feature is built) in containers instead of native installs
 - **pgAdmin or TablePlus** — GUI for inspecting Postgres data during development
+
+## 8.1 Running Everything via Docker Compose (recommended)
+
+Rather than installing Java/Maven/Node/Postgres/Tesseract natively, the whole stack (Postgres, backend, frontend) can be run with a single command via the root-level `docker-compose.yml`:
+
+```bash
+cp .env.example .env      # fill in ANTHROPIC_API_KEY at minimum
+docker compose up --build
+```
+
+This starts:
+- `db` — Postgres 16, with a named volume (`docket_pgdata`) so data survives restarts
+- `backend` — built from `backend/Dockerfile` (multi-stage: Maven build → Temurin JRE runtime, with the native Tesseract engine installed for OCR), on `http://localhost:8080`
+- `frontend` — built from `frontend/Dockerfile` (multi-stage: `npm run build` → served by nginx), on `http://localhost:5173`
+
+The backend reads `SPRING_DATASOURCE_URL`/`_USERNAME`/`_PASSWORD`, `JWT_SECRET`, and `ANTHROPIC_API_KEY` from environment variables (see `backend/src/main/resources/application.yml` — all have safe local-dev defaults so `mvn spring-boot:run` against a local Postgres still works unchanged). The frontend's `VITE_API_BASE_URL` is a **build-time** arg (Vite bakes env vars into the JS bundle), passed through from `.env` via `docker-compose.yml`.
+
+Native installs (Java, Maven, Node, Postgres, Tesseract) are still documented above and remain fully supported — Docker is an alternative, not a replacement, for local development.
 
 ### Sanity Check
 Run these after installing everything to confirm the environment is ready:

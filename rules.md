@@ -25,6 +25,7 @@
 - Auth: Spring Security + jjwt (JWT), `BCryptPasswordEncoder`
 - LLM: Anthropic API called via Spring's `RestClient`/`WebClient` (no official Java SDK — use a thin typed wrapper class, see architecture.md §3.6)
 - Testing: JUnit 5, Spring Boot Test, Mockito
+- Local dev/orchestration: Docker + Docker Compose (see `docker-compose.yml`, `backend/Dockerfile`, `frontend/Dockerfile`) — this is tooling, not application scope, so it doesn't change the runtime stack above
 
 **Do not** add: a second frontend framework, a second backend language/framework, a second database, a message queue (Kafka/RabbitMQ), or any paid third-party API (cloud OCR, cloud NLP) unless explicitly requested and reflected in architecture.md first.
 

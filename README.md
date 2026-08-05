@@ -64,14 +64,19 @@ docket/
 ├── design.md             # Colors, fonts, typography, component conventions
 ├── memory.md              # Running project log / session history
 ├── README.md              # You are here
+├── docker-compose.yml     # Runs db + backend + frontend together (`docker compose up --build`)
+├── .env.example           # Compose-level env vars (Postgres creds, JWT secret, Anthropic key)
 │
 ├── frontend/
+│   ├── Dockerfile         # Multi-stage: npm run build → served by nginx
+│   ├── nginx.conf
 │   └── src/
 │       ├── pages/         # Login, Dashboard, DocumentDetail, UploadDocument, ...
 │       ├── components/    # layout, documents, extraction, shared ui
 │       ├── hooks/, lib/, types/, styles/
 │
 └── backend/
+    ├── Dockerfile         # Multi-stage: Maven build → Temurin JRE + Tesseract runtime
     └── src/main/java/com/docket/
         ├── controller/    # REST controllers (Auth, Document, Template, Workspace)
         ├── entity/        # JPA entities
@@ -87,7 +92,9 @@ See [`architecture.md`](./architecture.md) for the complete, annotated folder tr
 
 ## Prerequisites
 
-Install these before running the project locally:
+**Fastest path:** [Docker Desktop](https://www.docker.com/products/docker-desktop/) is the only thing you need — see [Option A](#getting-started) below. Everything past this section assumes you're running natively instead.
+
+Install these before running the project locally without Docker:
 
 - **Java 17+ (JDK)** — Temurin/Adoptium or Oracle JDK
 - **Maven 3.9+**
@@ -105,6 +112,31 @@ Optional: Docker Desktop (containerized Postgres), IntelliJ IDEA (recommended ID
 Full details and a sanity-check command block: see `architecture.md` §8 "Prerequisites & Local Setup."
 
 ## Getting Started
+
+### Option A: Docker (recommended — one command, no local Java/Node/Postgres/Tesseract needed)
+
+Requires [Docker Desktop](https://www.docker.com/products/docker-desktop/).
+
+```bash
+cp .env.example .env
+# edit .env — set ANTHROPIC_API_KEY at minimum; POSTGRES_PASSWORD/JWT_SECRET have dev defaults
+
+docker compose up --build
+```
+
+This builds and starts three containers together:
+
+| Service | URL | What it is |
+|---|---|---|
+| `frontend` | http://localhost:5173 | React app built with Vite, served by nginx |
+| `backend` | http://localhost:8080 | Spring Boot API |
+| `db` | localhost:5432 | PostgreSQL 16 (data persisted in a Docker volume) |
+
+Flyway migrations run automatically on backend startup, same as running natively. Stop everything with `Ctrl+C` or `docker compose down` (add `-v` to also wipe the Postgres volume). Rebuild after changing backend or frontend code with `docker compose up --build`.
+
+### Option B: Native (no Docker)
+
+See [`architecture.md`](./architecture.md) §8 for full prerequisites (JDK, Maven, Node, Postgres, Tesseract).
 
 ### Backend Setup
 

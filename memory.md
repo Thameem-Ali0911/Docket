@@ -18,7 +18,7 @@
 
 - **Active Phase:** Phase 1 — Auth & Workspace (in progress)
 - **Last Updated:** 2026-08-05
-- **Overall Progress:** ~15% — Phase 0 complete; frontend/backend integration verified, PostgreSQL connection confirmed, and Flyway migration applied cleanly
+- **Overall Progress:** ~15% — Phase 0 complete; frontend/backend integration verified, PostgreSQL connection confirmed, and Flyway migration applied cleanly. Docker Compose setup added this session (tooling, not a phase deliverable) so the stack can be run with one command.
 
 ## Completed
 
@@ -32,6 +32,7 @@
 - [x] `GET /api/health` endpoint built (`HealthController.java`)
 - [x] First Flyway migration written (`V1__init_schema.sql` — `workspaces`, `users` tables)
 - [x] Basic `SecurityConfig.java` written (permits `/api/health`, `/api/auth/**`; CORS fixed — see Known Issues)
+- [x] Dockerized the whole stack: `backend/Dockerfile` (Maven build → Temurin 25 JRE runtime, native Tesseract installed), `frontend/Dockerfile` (npm build → nginx), root `docker-compose.yml` (db + backend + frontend), root `.env.example`
 
 ## In Progress
 
@@ -58,6 +59,9 @@
 ## Known Issues / Gotchas
 
 - **Flyway warning on Postgres 18.4.** The backend startup log shows `PostgreSQL 18.4` is newer than the version tested by Flyway, but `V1__init_schema.sql` was still validated successfully and the schema is up to date.
+- **Docker Compose build not yet run/verified this session.** `docker-compose.yml`, `backend/Dockerfile`, and `frontend/Dockerfile` were written and the compose YAML was syntax-checked, but `docker compose up --build` has NOT actually been executed against Docker Desktop yet (no Docker daemon available in this session's environment). Next session with Docker Desktop running should do `docker compose up --build` and confirm all three containers come up healthy and the frontend can reach the backend health check.
+- **`TESSDATA_PREFIX` path in `backend/Dockerfile` (`/usr/share/tesseract-ocr/5/tessdata`) is a best guess** based on the Debian `tesseract-ocr` apt package layout — not yet verified since OCR (Phase 3) isn't built yet. Confirm/fix this path when Phase 3 lands and Tess4J is actually wired up, by shelling into the built container (`docker compose exec backend sh` — note the run-stage image doesn't have a shell by default beyond what's in Temurin's base) or checking `dpkg -L tesseract-ocr` during the image build.
+- **Frontend's `VITE_API_BASE_URL` is baked in at Docker build time**, not read at container runtime (Vite env vars are compile-time). If the backend's externally-reachable URL changes, the frontend image must be rebuilt (`docker compose up --build frontend`), not just restarted.
 
 ## Ideas / Not Yet Approved
 
@@ -68,6 +72,12 @@
 ## Commands Reference
 
 ```bash
+# --- Docker (recommended) ---
+cp .env.example .env    # set ANTHROPIC_API_KEY at minimum
+docker compose up --build
+# frontend: http://localhost:5173, backend: http://localhost:8080, db: localhost:5432
+
+# --- Native (no Docker) ---
 # Backend
 cd backend
 ./mvnw spring-boot:run
@@ -117,3 +127,14 @@ npm run dev
 - Tested/confirmed: Backend health endpoint correctness; CORS fix reviewed; PostgreSQL connection and Flyway migration verification from startup logs. Frontend browser check already showed `Backend health check: OK`.
 - Still untested / follow-up: none for Phase 0; Phase 1 work begins next.
 - Next session should: implement auth and workspace support, starting with the backend signup/login flow and frontend login/signup pages.
+
+### Session 5 — 2026-08-05
+- User requested: dockerize the project so backend and frontend don't need to be run/managed separately, given Docker Desktop 29.5.3 is installed locally.
+- Followed AGENTS.md Session Start Protocol: read memory.md, phases.md (implicitly — no phase conflict, this is infra/tooling not app scope), rules.md, architecture.md before making changes; sanity-checked the actual repo (cloned fresh from `main`) against memory.md's claims and found them accurate.
+- Added: `backend/Dockerfile` (multi-stage — Maven+Temurin 25 JDK build stage, Temurin 25 JRE run stage with native `tesseract-ocr` installed for future Phase 3 OCR work, non-root user), `backend/.dockerignore`; `frontend/Dockerfile` (multi-stage — Node 20 build stage running `npm run build` with `VITE_API_BASE_URL` as a build arg, nginx 1.27 run stage), `frontend/nginx.conf` (SPA fallback routing), `frontend/.dockerignore`; root `docker-compose.yml` (services: `db` Postgres 16 with healthcheck + named volume, `backend`, `frontend`; backend waits on db healthcheck); root `.env.example`.
+- Parameterized `backend/src/main/resources/application.yml` datasource/jwt/anthropic values with `${VAR:default}` env-var syntax so the same jar/image works both natively (`mvn spring-boot:run`, defaults unchanged) and in Docker Compose (env vars injected by compose) — no more need for a separate `application-dev.yml` copy step when using Docker.
+- Confirmed no code changes needed to `SecurityConfig.java` — its CORS allow-list already targets `http://localhost:5173`, which is exactly where the frontend container's nginx is published.
+- Updated docs per AGENTS.md §6.2: `architecture.md` §8.1 (new — Docker Compose usage), `README.md` (Getting Started now has Option A Docker / Option B native, Prerequisites section points to Docker as the fast path, Project Structure tree lists the new Docker files), `rules.md` §2 (Docker/Compose added to approved tooling list, explicitly scoped as tooling not runtime stack), `memory.md` (this entry + Completed + Known Issues + Commands Reference).
+- Tested/confirmed: `docker-compose.yml` is valid YAML (parsed with PyYAML). Dockerfiles were written carefully against the actual `pom.xml` (Java 25), `package.json` (Vite 8), and existing config files, but **not built or run** — no Docker daemon available in this session's sandboxed environment.
+- Still untested / follow-up: actually run `docker compose up --build` on the user's machine (Docker Desktop 29.5.3) and confirm all three services come up and the frontend reaches the backend; verify the `TESSDATA_PREFIX` path guess in `backend/Dockerfile` once Phase 3 (OCR) is built.
+- Next session should: continue Phase 1 (auth/workspace) as previously planned — Docker setup was a tooling request, not a phase-scope change. If the user reports a Docker Compose issue first, debug that before resuming Phase 1.
