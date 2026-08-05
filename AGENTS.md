@@ -24,7 +24,8 @@ Before writing a single line of code, an agent MUST:
 4. **Read `prd.md`** — re-sync on what's actually in scope. If a request from the user sounds like a new feature, check it against `prd.md` §6/§7 (Stretch Features / Non-Goals) before building it.
 5. **Read `architecture.md`** — confirm the folder structure and tech stack before creating any new file. Do not invent a different folder layout or introduce a library not listed in `rules.md` §2.
 6. **Read `design.md`** — if the task touches any UI, reuse the existing color tokens, type scale, and component conventions. Do not introduce new colors/fonts ad hoc.
-7. **Only then** — begin the task the user actually asked for, scoped to the currently active phase.
+7. **Verify the docs against the actual repo** — do not trust `memory.md` blindly. Run a quick sanity check (e.g., `git log --oneline -10`, list the folders `memory.md` claims exist, check whether the last Session Log entry's "Files touched" are actually present and match what's described). A prior session may have crashed, been cut off, or forgotten to update the docs before ending. If reality and `memory.md` disagree, **trust the repo, flag the discrepancy to the user, and correct `memory.md` before proceeding** — do not silently build on top of a false status.
+8. **Only then** — begin the task the user actually asked for, scoped to the currently active phase.
 
 If any of these files is missing, contradictory, or clearly out of date relative to the actual code in the repo, **stop and flag this to the user** rather than guessing or silently reconciling it yourself.
 
@@ -33,6 +34,8 @@ If any of these files is missing, contradictory, or clearly out of date relative
 - Work **only** within the phase marked "Active" in `memory.md` / `phases.md`, unless the user explicitly instructs otherwise.
 - If the user's request belongs to a later phase (e.g., asking for export functionality while still in Phase 2), tell them which phase it belongs to and ask whether they want to jump ahead, rather than silently building it.
 - Do not mark a phase complete in `memory.md` until its Definition of Done (stated in `phases.md`) is actually met and verified (build passes, feature manually confirmed, tests green if present).
+- **Never report something as "done," "working," or "verified" without actually having run it.** If the backend wasn't started, the frontend wasn't built, or a test suite wasn't executed in this session, say so explicitly ("not run this session — untested") instead of implying it was checked. `memory.md`'s "Completed" list is only for things genuinely built, run, and confirmed — not things that "should work."
+- If a session runs out of time/budget mid-task, **stop at a clean boundary, not mid-file.** Finish the current file/function, leave the code in a compilable state if at all possible, and log exactly what's incomplete in `memory.md`'s "In Progress" — don't leave silent half-finished work for the next session to discover by surprise.
 
 ## 3. Security Checklist (apply to every change, every session)
 
@@ -56,6 +59,16 @@ If a task would require violating any of the above to "get it working faster," s
 - Every new REST endpoint gets a short Javadoc comment (purpose, input, output).
 - Follow the existing package layout under `backend/src/main/java/com/docket/...` and `frontend/src/...` — don't restructure folders without updating `architecture.md` first.
 - Do not silently "improve" or refactor unrelated code while doing a scoped task. If you notice a real problem outside the current task, note it in `memory.md`'s "Known Issues / Gotchas" instead of fixing it unprompted.
+
+## 4.5 Git & Commit Discipline
+
+Chat history disappears between sessions; git history does not. Treat commits as a second, code-level memory trail that backs up `memory.md`.
+
+- Commit at the end of every session that touched code — do not leave a session's work uncommitted for the next agent to find in a dirty working tree.
+- Write commit messages that mirror the session's `memory.md` log entry, e.g. `Phase 2: add invoice upload endpoint + file validation (Session 7)`. A future agent should be able to reconstruct roughly what happened from `git log --oneline` alone, without opening `memory.md`.
+- Prefer small, logically scoped commits over one giant end-of-session commit, but never leave work uncommitted just because it "isn't finished" — a WIP commit with a clear `WIP:` prefix is better than losing the diff.
+- Never commit files containing real secrets (see §3 checklist). If a secret was accidentally staged, unstage and fix it before committing — do not commit-then-fix.
+- If you inherit a dirty or uncommitted working tree at session start, flag it to the user before building on top of it — it may mean the previous session ended abnormally.
 
 ## 5. What To Do When Requirements Are Ambiguous
 
@@ -119,8 +132,27 @@ If a past decision recorded in `memory.md`'s "Key Decisions & Why" turns out to 
 - [ ] Any other doc affected by this session's changes (§6.2 table) updated
 - [ ] No secrets committed; `.env`/`application-dev.yml` real values still untracked
 - [ ] If a phase was completed, its Definition of Done in `phases.md` was actually satisfied, not just assumed
+- [ ] Work committed to git (§4.5), with a message that matches the Session Log entry
+- [ ] If this was the session that finished the last remaining phase, the §8 "Production-Ready" checklist was actually run against the repo before telling the user the project is done
 
-## 8. Quick Reference — File Roles
+## 8. Definition of "Production-Ready" (Final Loop Exit Criteria)
+
+The loop in §1–§7 governs each individual session. This section governs when the loop is allowed to end — i.e., when Docket is actually a production-ready SaaS product, not just "all 10 phases in `phases.md` marked complete." Do not declare the project done unless every item below is true and verified, not assumed:
+
+- [ ] All 10 phases in `phases.md` completed, each with its Definition of Done actually verified (not just checked off)
+- [ ] Backend and frontend both build cleanly from a fresh clone with no manual patching (`mvn clean install` / `npm install && npm run build` succeed)
+- [ ] Environment variables are fully documented in `.env.example` / `application-dev.yml.example`, and the app fails with a clear error (not a silent crash) if a required one is missing
+- [ ] Auth, workspace isolation, and the §3 security checklist have been re-verified end-to-end — not just per-PR, but as a final pass across the whole codebase
+- [ ] Core user flows (signup → upload → extraction → summary → anomaly flag → export) work end-to-end against a real deployed instance, not just `localhost`
+- [ ] Error states (bad file, OCR failure, LLM failure, network failure) are handled gracefully in the UI — no blank screens, no unhandled promise rejections
+- [ ] Basic automated test coverage exists for the critical paths (auth, upload, extraction parsing/validation) per `rules.md` §testing conventions — not necessarily exhaustive, but not zero
+- [ ] The app is actually deployed (per Phase 9) to the target hosts (frontend, backend, DB) and reachable at a public URL, with deployment steps reproducible from `architecture.md`
+- [ ] `memory.md`, `phases.md`, `prd.md`, `architecture.md`, `rules.md`, and `design.md` all reflect the final, as-built state — not an earlier planning snapshot
+- [ ] No secrets, API keys, or `.env` files are present in git history (check, don't assume) — if any were ever committed, treat them as compromised and rotate them
+
+If the user asks "is Docket production-ready?", check this list against the actual repo state rather than answering from memory of what phases.md says should be true.
+
+## 9. Quick Reference — File Roles
 
 | File | What it's for | When to read it | When to update it |
 |---|---|---|---|
@@ -135,4 +167,4 @@ If a past decision recorded in `memory.md`'s "Key Decisions & Why" turns out to 
 
 ---
 
-**Summary for agents in one paragraph:** Read `memory.md` → `phases.md` → `rules.md` → `prd.md` → `architecture.md` → `design.md`, in that order, before doing anything. Work only within the active phase. Apply the security checklist to every change touching auth, data access, file uploads, or LLM prompts. Never commit secrets. When you're done, update `memory.md` (always) and any other doc whose subject matter actually changed — this is not optional cleanup, it *is* the deliverable that lets the next session, tool, or person continue without re-deriving everything you just figured out.
+**Summary for agents in one paragraph:** Read `memory.md` → `phases.md` → `rules.md` → `prd.md` → `architecture.md` → `design.md`, in that order, then sanity-check that against the actual repo/git state before trusting it. Work only within the active phase, and stop at a clean boundary rather than mid-file if you run out of budget. Apply the security checklist to every change touching auth, data access, file uploads, or LLM prompts. Never commit secrets, and never claim something is "done" or "verified" unless you actually ran it this session. When you're done, update `memory.md` (always) and any other doc whose subject matter actually changed, then commit — this is not optional cleanup, it *is* the deliverable that lets the next session, tool, or person continue without re-deriving everything you just figured out. Only when the §8 checklist is fully and verifiably true does the loop end.
