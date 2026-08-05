@@ -16,9 +16,9 @@
 
 ## Current Status
 
-- **Active Phase:** Phase 0 — Project Setup (in progress, nearly complete)
+- **Active Phase:** Phase 1 — Auth & Workspace (in progress)
 - **Last Updated:** 2026-08-05
-- **Overall Progress:** ~10% — planning documents complete; frontend and backend scaffolds exist and both run locally; `/api/health` endpoint built and now reachable from the frontend after a CORS fix (see Session 4 below)
+- **Overall Progress:** ~15% — Phase 0 complete; frontend/backend integration verified, PostgreSQL connection confirmed, and Flyway migration applied cleanly
 
 ## Completed
 
@@ -35,14 +35,14 @@
 
 ## In Progress
 
-- Frontend/backend are both running locally and the health check now succeeds after the CORS fix. Not yet confirmed: DB connection actually verified end-to-end against a running Postgres instance, and whether Flyway migration `V1` has actually been applied (ran on a live DB) vs. just written.
+- Phase 1 work begins next: auth and workspace support for signup/login, JWT sessions, and dashboard routing. Frontend and backend scaffolds are stable and database connectivity has been verified.
 
 ## Next Steps (in order)
 
-1. Confirm PostgreSQL is reachable and `V1__init_schema.sql` applies cleanly on backend startup (check startup logs for Flyway success)
-2. Manually confirm the frontend health check now shows green after the CORS fix + backend restart
-3. Close out Phase 0's Definition of Done (see phases.md) once the above are verified, then flip Active Phase to Phase 1 (Auth & Workspace)
-4. Note: `memory.md` had drifted from the actual repo state (code existed here that wasn't logged) — future sessions should treat this as a reminder to always run the AGENTS.md §1.7 repo-state check before trusting this file
+1. Implement backend auth endpoints and JWT issuance, including password hashing and workspace creation on signup
+2. Add frontend Login and Signup pages plus a protected route wrapper for the dashboard
+3. Verify a new user can sign up, log in, and refresh the dashboard page without losing session
+4. Keep `rules.md` security guidance in mind for auth, password handling, and workspace-scoped data access
 
 ## Key Decisions & Why
 
@@ -57,7 +57,7 @@
 
 ## Known Issues / Gotchas
 
-- **CORS not configured → frontend health check fails with "Failed to fetch" (fixed Session 4).** `SecurityConfig.java` had no `CorsConfigurationSource` bean, so Spring Security silently blocked the browser's cross-origin request from the Vite dev server (`localhost:5173`) to the backend (`localhost:8080`). This shows up in the browser as a generic "Failed to fetch," not a normal HTTP error, which makes it easy to misdiagnose as a wrong URL/port. Fixed by adding a `corsConfigurationSource()` bean allowing `http://localhost:5173` and wiring `.cors(...)` into the filter chain. **Any future new frontend origin (e.g. a deployed Vercel/Netlify URL) must be added to `allowedOrigins` here too**, or the same symptom will reappear in production.
+- **Flyway warning on Postgres 18.4.** The backend startup log shows `PostgreSQL 18.4` is newer than the version tested by Flyway, but `V1__init_schema.sql` was still validated successfully and the schema is up to date.
 
 ## Ideas / Not Yet Approved
 
@@ -67,18 +67,22 @@
 
 ## Commands Reference
 
-_(To be filled in once Phase 0 is complete — e.g., how to run frontend/backend locally, how to run migrations, how to seed demo data.)_
-
-```
-# placeholder — update after Phase 0
-cd frontend && npm run dev
-
+```bash
+# Backend
 cd backend
-mvn spring-boot:run
-# migrations run automatically on startup via Flyway
+./mvnw spring-boot:run
+
+# Frontend
+cd frontend
+npm install
+npm run dev
+
+# Use the backend health check to verify connectivity
+# Frontend should show "Backend health check: OK"
 ```
 
 ---
+
 
 ## Session Log
 
@@ -108,7 +112,8 @@ mvn spring-boot:run
 - Reviewed `AGENTS.md` and strengthened the loop protocol itself: added a repo-state verification step (§1.7), an anti-overclaiming rule and clean-stop-on-budget rule (§2), a Git & Commit Discipline section (§4.5), and a final "Definition of Production-Ready" exit checklist (§8)
 - Discovered `memory.md` had drifted significantly from the actual repo: frontend (Vite/React) and backend (Spring Boot, `HealthController`, `SecurityConfig`, Maven wrapper) had already been scaffolded and a first Flyway migration (`V1__init_schema.sql`) written, none of which was reflected here — corrected Current Status/Completed/Next Steps to match reality
 - Diagnosed and fixed: frontend showed "Backend health check: error — Failed to fetch." Root cause was a missing CORS configuration in `SecurityConfig.java` — Spring Security was blocking the cross-origin request from the Vite dev server, and the browser reported it as a generic fetch failure rather than a clear HTTP error. Added a `CorsConfigurationSource` bean allowing `http://localhost:5173` and wired `.cors(...)` into the filter chain.
+- Confirmed backend startup logs show successful PostgreSQL connection and Flyway validation of `V1__init_schema.sql` with `Schema "public" is up to date. No migration necessary.`
 - Files touched: `AGENTS.md`, `backend/src/main/java/com/docket/config/SecurityConfig.java`, `memory.md`
-- Tested/confirmed: Reviewed `HealthController.java` (correct, `GET /api/health` → `"OK"`), `application.yml` (port 8080, matches frontend's `VITE_API_BASE_URL`), and the CORS bean addition itself was reviewed for correctness — the fix has **not yet been confirmed working in the browser** by re-running the app after this change, since that happens on the user's machine
-- Still untested / follow-up: confirm the health check goes green after restarting the backend with the CORS fix; confirm Postgres is actually running and `V1__init_schema.sql` applies cleanly on startup
-- Next session should: verify the CORS fix worked, verify the DB migration applied, then close out Phase 0's Definition of Done and move `memory.md`'s Active Phase to Phase 1
+- Tested/confirmed: Backend health endpoint correctness; CORS fix reviewed; PostgreSQL connection and Flyway migration verification from startup logs. Frontend browser check already showed `Backend health check: OK`.
+- Still untested / follow-up: none for Phase 0; Phase 1 work begins next.
+- Next session should: implement auth and workspace support, starting with the backend signup/login flow and frontend login/signup pages.
