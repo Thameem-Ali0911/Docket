@@ -173,3 +173,10 @@ npm run dev
 - Tested/confirmed: Created a new user via `/api/auth/signup` and logged in via `/api/auth/login`. Verified that calling `/api/documents` with the resulting JWT now returns a `200 OK` with an empty array `[]` instead of throwing a 500. 
 - Still untested / follow-up: Manually verify the file upload functionality via the frontend UI since it's the core of Phase 2.
 - Next session should: Verify Phase 2 file upload from the browser, and then move on to Phase 3 (OCR Extraction) if successful.
+
+### Session 9 — 2026-08-08
+- Addressed a bug where the dashboard entered an infinite redirect loop after a successful document upload. The upload actually succeeded (file written to disk, row in DB), but Spring's Jackson JSON serialization threw an `InvalidDefinitionException` (StackOverflow / Hibernate Proxy error) when trying to serialize the `Document` entity to return it to the frontend. This was caused by the `workspace` relationship being a lazily loaded Hibernate proxy.
+- Added `@JsonIgnore` to the `workspace` field in `Document.java` to prevent Jackson from attempting to serialize the linked `Workspace` entity, which the frontend doesn't need anyway.
+- Re-compiled backend and restarted backend container.
+- Tested/confirmed: Validated that the `/api/documents` endpoint now successfully returns `200 OK` without throwing serialization exceptions.
+- Next session should: User verify upload from frontend.

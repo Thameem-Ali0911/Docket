@@ -23,6 +23,7 @@ public class Document {
 
     @ManyToOne(optional = false)
     @JoinColumn(name = "workspace_id", nullable = false)
+    @com.fasterxml.jackson.annotation.JsonIgnore
     private Workspace workspace;
 
     @Enumerated(EnumType.STRING)
