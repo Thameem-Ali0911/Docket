@@ -32,8 +32,8 @@ public class DocumentController {
      */
     @GetMapping
     public ResponseEntity<List<Document>> getDocuments(Authentication authentication) {
-        String email = authentication.getName();
-        List<Document> documents = documentService.getDocumentsForWorkspace(email);
+        Integer userId = (Integer) authentication.getPrincipal();
+        List<Document> documents = documentService.getDocumentsForWorkspace(userId);
         return ResponseEntity.ok(documents);
     }
 
@@ -50,8 +50,8 @@ public class DocumentController {
             @RequestParam("file") MultipartFile file,
             Authentication authentication) {
         
-        String email = authentication.getName();
-        Document document = documentService.uploadDocument(email, type, file);
+        Integer userId = (Integer) authentication.getPrincipal();
+        Document document = documentService.uploadDocument(userId, type, file);
         return ResponseEntity.ok(document);
     }
 }

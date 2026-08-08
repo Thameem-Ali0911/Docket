@@ -162,3 +162,14 @@ npm run dev
 - Tested/confirmed: Backend compiles successfully (`mvn clean compile`). Frontend builds successfully (`npm run build`).
 - Still untested / follow-up: End-to-end auth flow needs to be run locally (start DB + backend + frontend and manually sign up).
 - Next session should: Boot the stack (via Docker Compose or native) and verify Phase 1 E2E flow.
+
+### Session 8 — 2026-08-08
+- Diagnosed and fixed a bug where the frontend login flow would get "stuck on 'Signing in...'". The root cause was that `JwtAuthFilter` injected the `userId` as an `Integer` into the Spring Security principal, but `DocumentController` mistakenly cast `authentication.getName()` to a `String email`. This caused `DocumentService` to look up the user by email using the `userId` string (e.g., `"3"`), resulting in a `RuntimeException` (500). The frontend `/dashboard` immediately caught this 500 error from `/api/documents`, cleared the token, and redirected back to `/login` too fast for the user to notice.
+- Modified `DocumentController.java` to extract `Integer userId = (Integer) authentication.getPrincipal()` and pass it to `DocumentService`.
+- Modified `DocumentService.java` to accept `Integer userId` instead of `String email`, and to use `userRepository.findById(userId)`.
+- Changed `DocumentService` to throw an `ApiException` (404) instead of a generic `RuntimeException` if the user is somehow not found.
+- Re-compiled the backend and rebuilt the `backend` Docker image.
+- Files touched: `backend/src/main/java/com/docket/controller/DocumentController.java`, `backend/src/main/java/com/docket/service/DocumentService.java`.
+- Tested/confirmed: Created a new user via `/api/auth/signup` and logged in via `/api/auth/login`. Verified that calling `/api/documents` with the resulting JWT now returns a `200 OK` with an empty array `[]` instead of throwing a 500. 
+- Still untested / follow-up: Manually verify the file upload functionality via the frontend UI since it's the core of Phase 2.
+- Next session should: Verify Phase 2 file upload from the browser, and then move on to Phase 3 (OCR Extraction) if successful.
