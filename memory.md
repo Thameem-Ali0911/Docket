@@ -17,8 +17,8 @@
 ## Current Status
 
 - **Active Phase:** Phase 1 — Auth & Workspace (in progress)
-- **Last Updated:** 2026-08-05
-- **Overall Progress:** ~15% — Phase 0 complete; frontend/backend integration verified, PostgreSQL connection confirmed, and Flyway migration applied cleanly. Docker Compose setup added this session (tooling, not a phase deliverable) so the stack can be run with one command.
+- **Last Updated:** 2026-08-08
+- **Overall Progress:** ~25% — Phase 1 coded (Auth endpoints, JWT session, Frontend routes, UI pages). Builds cleanly. Needs manual E2E verification.
 
 ## Completed
 
@@ -33,17 +33,18 @@
 - [x] First Flyway migration written (`V1__init_schema.sql` — `workspaces`, `users` tables)
 - [x] Basic `SecurityConfig.java` written (permits `/api/health`, `/api/auth/**`; CORS fixed — see Known Issues)
 - [x] Dockerized the whole stack: `backend/Dockerfile` (Maven build → Temurin 25 JRE runtime, native Tesseract installed), `frontend/Dockerfile` (npm build → nginx), root `docker-compose.yml` (db + backend + frontend), root `.env.example`
+- [x] Backend Auth Implementation: `Workspace` and `User` entities/repos, JWT infrastructure, `GlobalExceptionHandler`, and `AuthController` (login, signup, /me).
+- [x] Frontend Auth Implementation: Tailwind v4 config, `App.jsx` React Router setup, and UI pages (`Login`, `Signup`, `Dashboard`).
 
 ## In Progress
 
-- Phase 1 work begins next: auth and workspace support for signup/login, JWT sessions, and dashboard routing. Frontend and backend scaffolds are stable and database connectivity has been verified.
+- Phase 1 E2E verification: Need to confirm a new user can sign up, log in, and refresh the dashboard page without losing session against a running backend.
 
 ## Next Steps (in order)
 
-1. Implement backend auth endpoints and JWT issuance, including password hashing and workspace creation on signup
-2. Add frontend Login and Signup pages plus a protected route wrapper for the dashboard
-3. Verify a new user can sign up, log in, and refresh the dashboard page without losing session
-4. Keep `rules.md` security guidance in mind for auth, password handling, and workspace-scoped data access
+1. Verify Phase 1 functionality using Docker Compose or native run (signup -> login -> dashboard).
+2. Mark Phase 1 complete if E2E tests pass.
+3. Move to Phase 2 (Upload & Cloud Storage)
 
 ## Key Decisions & Why
 
@@ -149,3 +150,13 @@ npm run dev
 - Since no backend code exists yet for the LLM client, there's nothing to functionally test this session — when Phase 4 starts, the actual Gemini REST API shape (endpoint, auth header, request/response JSON) will need to be looked up fresh rather than assumed, since it differs from Anthropic's `/v1/messages` shape referenced in the old architecture.md text.
 - Files touched: `README.md`, `architecture.md`, `rules.md`, `prd.md`, `phases.md`, `AGENTS.md`, `memory.md`, `backend/src/main/resources/application.yml`, `backend/src/main/resources/application-dev.yml.example`, `docker-compose.yml`, `.env.example`.
 - Next session should: continue Phase 1 (auth/workspace) — the provider swap doesn't change phase scope. When Phase 4 (LLM extraction) actually starts, write `GeminiClient.java` against Gemini's real REST API (`generativelanguage.googleapis.com`), not by assuming it mirrors Anthropic's request/response shape.
+
+### Session 7 — 2026-08-08
+- Implemented backend Phase 1: JPA entities (`Workspace`, `User`), repositories, JWT generation and filter (`JwtService`, `JwtAuthFilter`), global error handler, and `AuthController` (signup, login, me).
+- Updated `SecurityConfig` to be stateless and integrated `JwtAuthFilter`.
+- Implemented frontend Phase 1: Installed React Router and Tailwind v4, configured CSS tokens per `design.md`, created `api.js` wrapper, `ProtectedRoute.jsx`, and UI pages (`Login.jsx`, `Signup.jsx`, `Dashboard.jsx`). Rewrote `App.jsx` with routes.
+- Built both frontend and backend to verify compilation; both build cleanly without errors.
+- Files touched: `backend/src/main/java/com/docket/...`, `frontend/src/...`, `frontend/index.html`, `frontend/vite.config.js`.
+- Tested/confirmed: Backend compiles successfully (`mvn clean compile`). Frontend builds successfully (`npm run build`).
+- Still untested / follow-up: End-to-end auth flow needs to be run locally (start DB + backend + frontend and manually sign up).
+- Next session should: Boot the stack (via Docker Compose or native) and verify Phase 1 E2E flow.
