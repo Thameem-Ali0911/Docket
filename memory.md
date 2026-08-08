@@ -35,17 +35,18 @@
 - [x] Dockerized the whole stack: `backend/Dockerfile` (Maven build → Temurin 25 JRE runtime, native Tesseract installed), `frontend/Dockerfile` (npm build → nginx), root `docker-compose.yml` (db + backend + frontend), root `.env.example`
 - [x] Backend Auth Implementation: `Workspace` and `User` entities/repos, JWT infrastructure, `GlobalExceptionHandler`, and `AuthController` (login, signup, /me).
 - [x] Frontend Auth Implementation: Tailwind v4 config, `App.jsx` React Router setup, and UI pages (`Login`, `Signup`, `Dashboard`).
-- [x] E2E Auth verified: User can successfully sign up, log in, and view dashboard against a running backend via browser.
+- [x] Phase 1: E2E Auth verified. User can successfully sign up, log in, and view dashboard against a running backend via browser.
+- [x] Phase 2: Created `Document` entity, `StorageService`, `DocumentController`, and DB migration.
+- [x] Phase 2: Added `UploadDocument.jsx` and updated `Dashboard.jsx` to list documents. Both backend and frontend compile successfully.
 
 ## In Progress
 
-- Planning Phase 2: Document Upload (Invoice).
+- Phase 2 E2E verification: Need to confirm a user can upload a PDF/Image, the file is saved to `/uploads` volume, and it appears on the dashboard.
 
 ## Next Steps (in order)
 
-1. Get approval on Phase 2 implementation plan.
-2. Implement backend file upload (local storage), Document DB schema/entity, and frontend Upload page.
-3. Verify Upload flow end-to-end.
+1. Verify Phase 2 Upload flow manually (start docker compose, log in, upload document).
+2. Start Phase 3 (OCR Extraction) once Phase 2 is verified.
 
 ## Key Decisions & Why
 

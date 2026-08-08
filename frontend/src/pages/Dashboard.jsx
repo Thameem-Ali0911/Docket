@@ -4,17 +4,23 @@ import { apiFetch, clearToken } from '../lib/api';
 
 /**
  * Dashboard page — shows the user's workspace and document list.
- * Phase 1: empty state only ("No documents yet").
- * Calls GET /api/auth/me on mount to verify the session and get workspace info.
  */
 export default function Dashboard() {
     const navigate = useNavigate();
     const [user, setUser] = useState(null);
+    const [documents, setDocuments] = useState([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        apiFetch('/api/auth/me')
-            .then(setUser)
+        // Fetch user and workspace documents in parallel
+        Promise.all([
+            apiFetch('/api/auth/me'),
+            apiFetch('/api/documents')
+        ])
+            .then(([userData, docsData]) => {
+                setUser(userData);
+                setDocuments(docsData);
+            })
             .catch(() => {
                 // Token is invalid/expired — send back to login
                 clearToken();
@@ -67,31 +73,74 @@ export default function Dashboard() {
             <main className="max-w-5xl mx-auto px-6 py-12">
                 <div className="flex items-center justify-between mb-8">
                     <h1>Dashboard</h1>
-                </div>
-
-                {/* Empty state — Phase 1 placeholder */}
-                <div className="card p-12 text-center">
-                    <div style={{ marginBottom: '16px' }}>
-                        {/* Simple document icon */}
-                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none"
-                             stroke="var(--color-text-disabled)" strokeWidth="1.5"
-                             strokeLinecap="round" strokeLinejoin="round"
-                             style={{ margin: '0 auto' }}>
-                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                            <polyline points="14 2 14 8 20 8" />
-                            <line x1="16" y1="13" x2="8" y2="13" />
-                            <line x1="16" y1="17" x2="8" y2="17" />
-                            <polyline points="10 9 9 9 8 9" />
-                        </svg>
-                    </div>
-                    <h3 style={{ marginBottom: '8px' }}>No documents yet</h3>
-                    <p style={{ color: 'var(--color-text-secondary)', marginBottom: '24px', fontSize: '15px' }}>
-                        Upload your first document to get started with extraction, summarization, and anomaly detection.
-                    </p>
-                    <button className="btn-primary" disabled title="Upload available in Phase 2">
-                        Upload document
+                    <button className="btn-primary" onClick={() => navigate('/upload')}>
+                        Upload Document
                     </button>
                 </div>
+
+                {documents.length === 0 ? (
+                    <div className="card p-12 text-center">
+                        <div style={{ marginBottom: '16px' }}>
+                            <svg width="48" height="48" viewBox="0 0 24 24" fill="none"
+                                 stroke="var(--color-text-disabled)" strokeWidth="1.5"
+                                 strokeLinecap="round" strokeLinejoin="round"
+                                 style={{ margin: '0 auto' }}>
+                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                                <polyline points="14 2 14 8 20 8" />
+                                <line x1="16" y1="13" x2="8" y2="13" />
+                                <line x1="16" y1="17" x2="8" y2="17" />
+                                <polyline points="10 9 9 9 8 9" />
+                            </svg>
+                        </div>
+                        <h3 style={{ marginBottom: '8px' }}>No documents yet</h3>
+                        <p style={{ color: 'var(--color-text-secondary)', marginBottom: '24px', fontSize: '15px' }}>
+                            Upload your first document to get started with extraction, summarization, and anomaly detection.
+                        </p>
+                        <button className="btn-primary" onClick={() => navigate('/upload')}>
+                            Upload document
+                        </button>
+                    </div>
+                ) : (
+                    <div className="card overflow-hidden">
+                        <table className="w-full text-left border-collapse">
+                            <thead>
+                                <tr style={{ borderBottom: '1px solid var(--color-border)', backgroundColor: '#F9FAFB' }}>
+                                    <th className="py-3 px-4 font-semibold text-sm" style={{ color: 'var(--color-text-secondary)' }}>Type</th>
+                                    <th className="py-3 px-4 font-semibold text-sm" style={{ color: 'var(--color-text-secondary)' }}>File</th>
+                                    <th className="py-3 px-4 font-semibold text-sm" style={{ color: 'var(--color-text-secondary)' }}>Status</th>
+                                    <th className="py-3 px-4 font-semibold text-sm" style={{ color: 'var(--color-text-secondary)' }}>Uploaded At</th>
+                                    <th className="py-3 px-4"></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {documents.map(doc => (
+                                    <tr key={doc.id} style={{ borderBottom: '1px solid var(--color-border)' }}>
+                                        <td className="py-3 px-4 font-medium">{doc.type}</td>
+                                        <td className="py-3 px-4 text-sm" style={{ color: 'var(--color-text-secondary)' }}>
+                                            <a href={import.meta.env.VITE_API_BASE_URL ? import.meta.env.VITE_API_BASE_URL + doc.fileUrl : doc.fileUrl} target="_blank" rel="noreferrer" className="hover:underline">
+                                                {doc.fileUrl.split('/').pop()}
+                                            </a>
+                                        </td>
+                                        <td className="py-3 px-4">
+                                            <span className={`badge ${doc.status === 'PENDING' ? 'badge-warning' : doc.status === 'PROCESSED' ? 'badge-success' : 'badge-danger'}`}>
+                                                {doc.status}
+                                            </span>
+                                        </td>
+                                        <td className="py-3 px-4 text-sm" style={{ color: 'var(--color-text-secondary)' }}>
+                                            {new Date(doc.uploadedAt).toLocaleString()}
+                                        </td>
+                                        <td className="py-3 px-4 text-right">
+                                            {/* Phase 3 placeholder */}
+                                            <button className="text-sm font-medium" style={{ color: 'var(--color-primary)' }} disabled>
+                                                View
+                                            </button>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                )}
             </main>
         </div>
     );
