@@ -1,33 +1,27 @@
-import { useEffect, useState } from 'react'
-import './App.css'
-
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import Login from './pages/Login';
+import Signup from './pages/Signup';
+import Dashboard from './pages/Dashboard';
+import ProtectedRoute from './components/ProtectedRoute';
 
 function App() {
-    const [health, setHealth] = useState('checking...')
-    const [error, setError] = useState(null)
-
-    useEffect(() => {
-        fetch(`${API_BASE_URL}/api/health`)
-            .then((res) => {
-                if (!res.ok) throw new Error(`Request failed: ${res.status}`)
-                return res.text()
-            })
-            .then((text) => setHealth(text))
-            .catch((err) => setError(err.message))
-    }, [])
-
     return (
-        <section id="center">
-            <div>
-                <h1>Docket</h1>
-                <p>
-                    Backend health check:{' '}
-                    <strong>{error ? `error — ${error}` : health}</strong>
-                </p>
-            </div>
-        </section>
-    )
+        <BrowserRouter>
+            <Routes>
+                <Route path="/" element={<Navigate to="/dashboard" replace />} />
+                <Route path="/login" element={<Login />} />
+                <Route path="/signup" element={<Signup />} />
+                <Route
+                    path="/dashboard"
+                    element={
+                        <ProtectedRoute>
+                            <Dashboard />
+                        </ProtectedRoute>
+                    }
+                />
+            </Routes>
+        </BrowserRouter>
+    );
 }
 
-export default App
+export default App;
