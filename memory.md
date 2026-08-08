@@ -16,9 +16,9 @@
 
 ## Current Status
 
-- **Active Phase:** Phase 2 — Document Upload (Invoice type only)
+- **Active Phase:** Phase 3 — OCR + Text Extraction Pipeline
 - **Last Updated:** 2026-08-08
-- **Overall Progress:** ~35% — Phase 1 complete and verified. Moving on to Document Uploads (Phase 2).
+- **Overall Progress:** ~45% — Phase 2 complete and verified. Moving on to OCR Extraction (Phase 3).
 
 ## Completed
 
@@ -38,15 +38,16 @@
 - [x] Phase 1: E2E Auth verified. User can successfully sign up, log in, and view dashboard against a running backend via browser.
 - [x] Phase 2: Created `Document` entity, `StorageService`, `DocumentController`, and DB migration.
 - [x] Phase 2: Added `UploadDocument.jsx` and updated `Dashboard.jsx` to list documents. Both backend and frontend compile successfully.
+- [x] Phase 2: E2E Auth verified. User can successfully sign up, log in, upload document, and view dashboard against a running backend via browser.
 
 ## In Progress
 
-- Phase 2 E2E verification: Need to confirm a user can upload a PDF/Image, the file is saved to `/uploads` volume, and it appears on the dashboard.
+- Phase 3 Implementation Plan created and waiting for user review.
 
 ## Next Steps (in order)
 
-1. Verify Phase 2 Upload flow manually (start docker compose, log in, upload document).
-2. Start Phase 3 (OCR Extraction) once Phase 2 is verified.
+1. Wait for user approval on Phase 3 implementation plan.
+2. Execute Phase 3 OCR implementation.
 
 ## Key Decisions & Why
 
