@@ -113,6 +113,22 @@
 
 ---
 
+## Phase 8.5 — Modern 3D & Motion Visual Overhaul
+**Goal:** Replace the flat "calm B2B" v1 look with the "Aurora Obsidian" design system (see `design.md` §8): a distinctive, modern, subtly-3D, animated UI — without breaking accessibility, performance, or any functional flow built in Phases 0–8.
+
+- Re-read `design.md` §8 (new tokens, motion rules, 3D scoping rules) before touching any component
+- Install `motion` (Framer Motion) and `@react-three/fiber` + `@react-three/drei`; update `package.json` — these are now approved in `architecture.md` §3.1 and `rules.md` §2, no further sign-off needed
+- Swap Tailwind theme tokens (colors, radii, shadows) to the new Aurora Obsidian palette defined in `design.md` §8.1 — one file change (`tailwind.config.js` + CSS variables), not per-component hex edits
+- Add the signature ambient element: a low-poly/particle aurora gradient mesh (React Three Fiber, `<Canvas>`) behind the dashboard hero and login/signup screens only — static fallback (CSS gradient, no WebGL) for `prefers-reduced-motion` or low-end devices
+- Add Framer Motion micro-interactions: page-transition fades, staggered list reveals for the document dashboard, card hover-lift (translateY + shadow, not scale-jump), and a subtle status-badge pulse for `processing` documents
+- Give cards/panels a soft glassmorphism treatment (backdrop-blur + translucent surface + 1px gradient border) per `design.md` §8.2 — keep data tables and forms flat/high-contrast, glass is for containers only, never for text-bearing rows
+- Re-skin buttons, badges, empty states, and the anomaly-flag component with the new tokens; keep all copy/UX behavior from earlier phases untouched
+- Run the full `ui-ux-pro-max` accessibility + motion checklist (contrast 4.5:1, 150–300ms durations, no animating width/height, keyboard focus visible, reduced-motion respected) before marking this phase done
+
+**Definition of Done:** Every screen built in Phases 1–8 still works exactly as before functionally, now rendered in the Aurora Obsidian system; Lighthouse accessibility score ≥ 90; page interactive within budget on a mid-tier laptop with the 3D canvas enabled; `prefers-reduced-motion` users get a fully static, still-attractive equivalent.
+
+---
+
 ## Phase 9 — Deployment & Demo Readiness
 **Goal:** Publicly accessible, demo-ready deployment.
 

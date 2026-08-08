@@ -65,6 +65,9 @@
 - **React Router** for navigation
 - **TanStack Query (React Query)** for data fetching/caching
 - **Recharts** for the anomaly/dashboard summary charts
+- **Framer Motion (`motion`)** for micro-interactions, page/scroll transitions, and staggered reveals (added Phase 8.5 — see design.md §8)
+- **React Three Fiber + drei** (thin React wrapper around Three.js) for the small set of ambient 3D elements defined in design.md §8 — scoped to hero/empty-state/decorative surfaces only, never used for core data tables or forms
+- **@react-three/postprocessing** (optional, only if performance budget allows) for subtle bloom/glow on the aurora-gradient signature element
 
 ### 3.2 Backend
 - **Java 17+ (LTS) with Spring Boot 3.x** — mature, battle-tested, strong typing, excellent tooling, and a natural fit if the student is more comfortable in the Java ecosystem

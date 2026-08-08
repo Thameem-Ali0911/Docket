@@ -16,7 +16,7 @@
 
 ## 2. Approved Libraries / Stack (do not deviate without updating architecture.md)
 
-- Frontend: React, Vite, Tailwind CSS, React Router, TanStack Query, Recharts
+- Frontend: React, Vite, Tailwind CSS, React Router, TanStack Query, Recharts, Framer Motion (`motion`), React Three Fiber + drei (approved Phase 8.5, scoped per design.md §8 — do not use Three.js/R3F inside data tables, forms, or anywhere it would hurt readability or accessibility)
 - Backend: Java 17+, Spring Boot 3.x, Spring Web, Spring Data JPA (Hibernate), Spring Security, Flyway, Jackson, Bean Validation
 - Build tool: Maven (or Gradle — pick one, do not mix)
 - OCR: Tess4J (+ native Tesseract engine and `tessdata`)
