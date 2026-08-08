@@ -16,9 +16,9 @@
 
 ## Current Status
 
-- **Active Phase:** Phase 1 — Auth & Workspace (in progress)
+- **Active Phase:** Phase 2 — Document Upload (Invoice type only)
 - **Last Updated:** 2026-08-08
-- **Overall Progress:** ~25% — Phase 1 coded (Auth endpoints, JWT session, Frontend routes, UI pages). Builds cleanly. Needs manual E2E verification.
+- **Overall Progress:** ~35% — Phase 1 complete and verified. Moving on to Document Uploads (Phase 2).
 
 ## Completed
 
@@ -35,16 +35,17 @@
 - [x] Dockerized the whole stack: `backend/Dockerfile` (Maven build → Temurin 25 JRE runtime, native Tesseract installed), `frontend/Dockerfile` (npm build → nginx), root `docker-compose.yml` (db + backend + frontend), root `.env.example`
 - [x] Backend Auth Implementation: `Workspace` and `User` entities/repos, JWT infrastructure, `GlobalExceptionHandler`, and `AuthController` (login, signup, /me).
 - [x] Frontend Auth Implementation: Tailwind v4 config, `App.jsx` React Router setup, and UI pages (`Login`, `Signup`, `Dashboard`).
+- [x] E2E Auth verified: User can successfully sign up, log in, and view dashboard against a running backend via browser.
 
 ## In Progress
 
-- Phase 1 E2E verification: Need to confirm a new user can sign up, log in, and refresh the dashboard page without losing session against a running backend.
+- Planning Phase 2: Document Upload (Invoice).
 
 ## Next Steps (in order)
 
-1. Verify Phase 1 functionality using Docker Compose or native run (signup -> login -> dashboard).
-2. Mark Phase 1 complete if E2E tests pass.
-3. Move to Phase 2 (Upload & Cloud Storage)
+1. Get approval on Phase 2 implementation plan.
+2. Implement backend file upload (local storage), Document DB schema/entity, and frontend Upload page.
+3. Verify Upload flow end-to-end.
 
 ## Key Decisions & Why
 
