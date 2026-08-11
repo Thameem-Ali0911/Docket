@@ -1,0 +1,217 @@
+diff --git a/backend/src/main/java/com/docket/service/DocumentProcessingService.java b/backend/src/main/java/com/docket/service/DocumentProcessingService.java
+index c1ea817..5a6bd56 100644
+--- a/backend/src/main/java/com/docket/service/DocumentProcessingService.java
++++ b/backend/src/main/java/com/docket/service/DocumentProcessingService.java
+@@ -12,6 +12,10 @@ import com.docket.repository.DocumentRepository;
+ @Service
+ public class DocumentProcessingService {
+ 
++    // Below this average per-word Tesseract confidence (0-100 scale), we treat the
++    // extraction as unreliable/garbled rather than trusting it just because it's non-empty.
++    private static final double MIN_OCR_CONFIDENCE = 60.0;
++
+     private final OcrService ocrService;
+     private final StorageService storageService;
+     private final DocumentRepository documentRepository;
+@@ -27,9 +31,23 @@ public class DocumentProcessingService {
+         try {
+             File savedFile = storageService.getFile(doc.getFileUrl());
+             if (savedFile != null) {
+-                String extractedText = ocrService.extractText(savedFile);
+-                doc.setExtractedText(extractedText);
+-                doc.setStatus(DocumentStatus.PROCESSED);
++                OcrResult result = ocrService.extractText(savedFile);
++                String extractedText = result.getText();
++
++                if (extractedText == null || extractedText.isBlank()) {
++                    doc.setStatus(DocumentStatus.FAILED);
++                    doc.setFailedReason("OCR completed but no text could be extracted from the file.");
++                } else if (result.isConfidenceApplicable() && result.getConfidence() < MIN_OCR_CONFIDENCE) {
++                    // Text came back, but Tesseract wasn't confident in what it read -
++                    // likely garbled/incorrect characters rather than a genuine extraction.
++                    doc.setStatus(DocumentStatus.FAILED);
++                    doc.setFailedReason(String.format(
++                        "OCR confidence too low (%.0f%%) - extracted text is likely inaccurate.",
++                        result.getConfidence()));
++                } else {
++                    doc.setExtractedText(extractedText);
++                    doc.setStatus(DocumentStatus.PROCESSED);
++                }
+             } else {
+                 doc.setStatus(DocumentStatus.FAILED);
+                 doc.setFailedReason("File could not be found for OCR.");
+diff --git a/backend/src/main/java/com/docket/service/OcrResult.java b/backend/src/main/java/com/docket/service/OcrResult.java
+new file mode 100644
+index 0000000..fef4182
+--- /dev/null
++++ b/backend/src/main/java/com/docket/service/OcrResult.java
+@@ -0,0 +1,34 @@
++package com.docket.service;
++
++/**
++ * Result of an OCR/text-extraction pass.
++ *
++ * confidence is on a 0-100 scale, mirroring Tesseract's own word-confidence scale.
++ * For text pulled directly out of a PDF's embedded text layer (no OCR involved),
++ * confidence is reported as -1 to mean "not applicable / trust it as-is", since that
++ * text came straight from the document rather than from image recognition.
++ */
++public class OcrResult {
++
++    public static final double NOT_APPLICABLE = -1.0;
++
++    private final String text;
++    private final double confidence;
++
++    public OcrResult(String text, double confidence) {
++        this.text = text;
++        this.confidence = confidence;
++    }
++
++    public String getText() {
++        return text;
++    }
++
++    public double getConfidence() {
++        return confidence;
++    }
++
++    public boolean isConfidenceApplicable() {
++        return confidence >= 0;
++    }
++}
+diff --git a/backend/src/main/java/com/docket/service/OcrService.java b/backend/src/main/java/com/docket/service/OcrService.java
+index 843d356..2637eb3 100644
+--- a/backend/src/main/java/com/docket/service/OcrService.java
++++ b/backend/src/main/java/com/docket/service/OcrService.java
+@@ -3,6 +3,9 @@ package com.docket.service;
+ import java.awt.image.BufferedImage;
+ import java.io.File;
+ import java.io.IOException;
++import java.util.List;
++
++import javax.imageio.ImageIO;
+ 
+ import org.apache.pdfbox.Loader;
+ import org.apache.pdfbox.pdmodel.PDDocument;
+@@ -11,8 +14,10 @@ import org.apache.pdfbox.rendering.PDFRenderer;
+ import org.apache.pdfbox.text.PDFTextStripper;
+ import org.springframework.stereotype.Service;
+ 
++import net.sourceforge.tess4j.ITessAPI;
+ import net.sourceforge.tess4j.Tesseract;
+ import net.sourceforge.tess4j.TesseractException;
++import net.sourceforge.tess4j.Word;
+ 
+ @Service
+ public class OcrService {
+@@ -32,12 +37,14 @@ public class OcrService {
+     }
+ 
+     /**
+-     * Extracts text from a given file (PDF or Image).
++     * Extracts text from a given file (PDF or Image), along with a confidence signal.
+      * @param file The file to process
+-     * @return Extracted text
++     * @return OcrResult containing extracted text and a confidence score (0-100), or
++     *         OcrResult.NOT_APPLICABLE confidence when text came from a PDF's embedded
++     *         text layer rather than image recognition.
+      * @throws Exception If an error occurs during extraction
+      */
+-    public String extractText(File file) throws Exception {
++    public OcrResult extractText(File file) throws Exception {
+         String fileName = file.getName().toLowerCase();
+         if (fileName.endsWith(".pdf")) {
+             return extractTextFromPdf(file);
+@@ -48,14 +55,16 @@ public class OcrService {
+         }
+     }
+ 
+-    private String extractTextFromPdf(File file) throws Exception {
++    private OcrResult extractTextFromPdf(File file) throws Exception {
+         try (PDDocument document = Loader.loadPDF(file)) {
+             PDFTextStripper stripper = new PDFTextStripper();
+             String text = stripper.getText(document);
+ 
+             // If text is extracted directly from the PDF and it's long enough, use it.
++            // This came from the embedded text layer, not image recognition, so there's
++            // no OCR confidence to report - trust it as-is.
+             if (text != null && text.trim().length() > 50) {
+-                return text.trim();
++                return new OcrResult(text.trim(), OcrResult.NOT_APPLICABLE);
+             }
+ 
+             // Fallback to OCR if the PDF is scanned (empty or very short text)
+@@ -63,21 +72,45 @@ public class OcrService {
+         }
+     }
+ 
+-    private String extractTextWithOcr(PDDocument document) throws IOException, TesseractException {
++    private OcrResult extractTextWithOcr(PDDocument document) throws IOException, TesseractException {
+         PDFRenderer pdfRenderer = new PDFRenderer(document);
+         StringBuilder extractedText = new StringBuilder();
++        double confidenceSum = 0;
++        int confidenceCount = 0;
+ 
+         for (int page = 0; page < document.getNumberOfPages(); page++) {
+             // Render at 300 DPI for good OCR quality
+             BufferedImage bim = pdfRenderer.renderImageWithDPI(page, 300, ImageType.RGB);
+             String text = tesseract.doOCR(bim);
+             extractedText.append(text).append("\n");
++
++            List<Word> words = tesseract.getWords(bim, ITessAPI.TessPageIteratorLevel.RIL_WORD);
++            for (Word word : words) {
++                confidenceSum += word.getConfidence();
++                confidenceCount++;
++            }
+         }
+ 
+-        return extractedText.toString().trim();
++        double avgConfidence = confidenceCount > 0 ? confidenceSum / confidenceCount : 0;
++        return new OcrResult(extractedText.toString().trim(), avgConfidence);
+     }
+ 
+-    private String extractTextFromImage(File file) throws TesseractException {
+-        return tesseract.doOCR(file).trim();
++    private OcrResult extractTextFromImage(File file) throws TesseractException, IOException {
++        String text = tesseract.doOCR(file).trim();
++
++        BufferedImage bim = ImageIO.read(file);
++        double avgConfidence = 0;
++        if (bim != null) {
++            List<Word> words = tesseract.getWords(bim, ITessAPI.TessPageIteratorLevel.RIL_WORD);
++            double confidenceSum = 0;
++            int confidenceCount = 0;
++            for (Word word : words) {
++                confidenceSum += word.getConfidence();
++                confidenceCount++;
++            }
++            avgConfidence = confidenceCount > 0 ? confidenceSum / confidenceCount : 0;
++        }
++
++        return new OcrResult(text, avgConfidence);
+     }
+ }
+diff --git a/memory.md b/memory.md
+index 8a5020c..c088c84 100644
+--- a/memory.md
++++ b/memory.md
+@@ -193,4 +193,15 @@ npm run dev
+ - Files touched: `backend/src/main/resources/db/migration/V3__add_extracted_text_to_documents.sql`, `backend/pom.xml`, `backend/src/main/java/com/docket/entity/Document.java`, `backend/src/main/java/com/docket/service/OcrService.java`, `backend/src/main/java/com/docket/service/DocumentService.java`, `backend/src/main/java/com/docket/service/StorageService.java`.
+ - Tested/confirmed: Backend compiles successfully (`mvn clean compile`).
+ - Still untested / follow-up: End-to-end verification of document upload and OCR text extraction from the frontend UI.
+-- Next session should: Have the user manually verify document upload and OCR extraction.
+\ No newline at end of file
++- Next session should: Have the user manually verify document upload and OCR extraction.
++
++### Session 11 — 2026-08-11
++- User manually verified upload (per Session 10 follow-up) and found two related bugs in status accuracy, both in the async OCR pipeline (`DocumentProcessingService.processDocumentAsync`), not the UI: the dashboard badge just renders whatever status the backend sets.
++- Bug 1: A blank/no-text image (e.g. one crafted to fail OCR) was still marked `PROCESSED`. Cause: `Tesseract.doOCR()` returns an empty string rather than throwing when it finds no text, so the old code unconditionally set `PROCESSED` after any non-exceptional OCR call. Fix: check `extractedText` for null/blank and set `FAILED` with a reason in that case.
++- Bug 2: An image with garbled/misread characters (non-blank but wrong text) was still marked `PROCESSED`, since it isn't blank. A presence check alone can't catch this — needed a quality signal. Fix: reworked `OcrService.extractText` to return a new `OcrResult(text, confidence)` instead of a bare `String`, using Tesseract's per-word confidence (`ITesseract.getWords(image, ITessAPI.TessPageIteratorLevel.RIL_WORD)`, 0–100 scale, averaged across words). `DocumentProcessingService` now marks the doc `FAILED` if average confidence is below `MIN_OCR_CONFIDENCE = 60.0`, with a reason string. For text pulled from a PDF's embedded text layer (not OCR'd), confidence is reported as `OcrResult.NOT_APPLICABLE` (`-1`) and skips the threshold check, since that text is trusted as-is.
++- Added `backend/src/main/java/com/docket/service/OcrResult.java` (new file) as the text+confidence carrier.
++- The `MIN_OCR_CONFIDENCE = 60.0` threshold is an untuned guess — flagged to the user as needing real calibration against sample "should pass" vs "should fail" documents, since Tesseract confidence also dips on legitimately noisy real scans (skew, low-res, handwriting), not just garbage images. User has not yet responded on whether/how to tune this.
++- Files touched: `backend/src/main/java/com/docket/service/DocumentProcessingService.java`, `backend/src/main/java/com/docket/service/OcrService.java`, `backend/src/main/java/com/docket/service/OcrResult.java` (new).
++- Tested/confirmed: Nothing — **no network access to Maven Central in this sandboxed session, so the build could not be run/compiled to confirm.** `Tesseract.getWords(BufferedImage, int)` and `Word.getConfidence()` are used based on documented tess4j 5.13.0 API (already a `pom.xml` dependency), not verified against the actual jar.
++- Still untested / follow-up: (1) Actually compile (`mvn clean compile`) and run this — signatures for `ITessAPI.TessPageIteratorLevel.RIL_WORD` / `Tesseract.getWords` need real-build confirmation. (2) Re-test both the original blank-OCR image and the garbled-text image end-to-end to confirm both now show `FAILED` with a sensible `failedReason`. (3) Calibrate `MIN_OCR_CONFIDENCE` against real scanned documents so legitimate-but-noisy scans aren't wrongly marked `FAILED`.
++- Next session should: Build and run the backend to confirm the tess4j API calls compile, then E2E-verify both failure cases before considering Phase 3 done.
+\ No newline at end of file

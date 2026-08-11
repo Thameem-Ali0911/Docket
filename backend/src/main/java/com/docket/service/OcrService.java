@@ -3,6 +3,9 @@ package com.docket.service;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
+import java.util.List;
+
+import javax.imageio.ImageIO;
 
 import org.apache.pdfbox.Loader;
 import org.apache.pdfbox.pdmodel.PDDocument;
@@ -11,8 +14,10 @@ import org.apache.pdfbox.rendering.PDFRenderer;
 import org.apache.pdfbox.text.PDFTextStripper;
 import org.springframework.stereotype.Service;
 
+import net.sourceforge.tess4j.ITessAPI;
 import net.sourceforge.tess4j.Tesseract;
 import net.sourceforge.tess4j.TesseractException;
+import net.sourceforge.tess4j.Word;
 
 @Service
 public class OcrService {
@@ -32,12 +37,14 @@ public class OcrService {
     }
 
     /**
-     * Extracts text from a given file (PDF or Image).
+     * Extracts text from a given file (PDF or Image), along with a confidence signal.
      * @param file The file to process
-     * @return Extracted text
+     * @return OcrResult containing extracted text and a confidence score (0-100), or
+     *         OcrResult.NOT_APPLICABLE confidence when text came from a PDF's embedded
+     *         text layer rather than image recognition.
      * @throws Exception If an error occurs during extraction
      */
-    public String extractText(File file) throws Exception {
+    public OcrResult extractText(File file) throws Exception {
         String fileName = file.getName().toLowerCase();
         if (fileName.endsWith(".pdf")) {
             return extractTextFromPdf(file);
@@ -48,14 +55,16 @@ public class OcrService {
         }
     }
 
-    private String extractTextFromPdf(File file) throws Exception {
+    private OcrResult extractTextFromPdf(File file) throws Exception {
         try (PDDocument document = Loader.loadPDF(file)) {
             PDFTextStripper stripper = new PDFTextStripper();
             String text = stripper.getText(document);
 
             // If text is extracted directly from the PDF and it's long enough, use it.
+            // This came from the embedded text layer, not image recognition, so there's
+            // no OCR confidence to report - trust it as-is.
             if (text != null && text.trim().length() > 50) {
-                return text.trim();
+                return new OcrResult(text.trim(), OcrResult.NOT_APPLICABLE);
             }
 
             // Fallback to OCR if the PDF is scanned (empty or very short text)
@@ -63,21 +72,45 @@ public class OcrService {
         }
     }
 
-    private String extractTextWithOcr(PDDocument document) throws IOException, TesseractException {
+    private OcrResult extractTextWithOcr(PDDocument document) throws IOException, TesseractException {
         PDFRenderer pdfRenderer = new PDFRenderer(document);
         StringBuilder extractedText = new StringBuilder();
+        double confidenceSum = 0;
+        int confidenceCount = 0;
 
         for (int page = 0; page < document.getNumberOfPages(); page++) {
             // Render at 300 DPI for good OCR quality
             BufferedImage bim = pdfRenderer.renderImageWithDPI(page, 300, ImageType.RGB);
             String text = tesseract.doOCR(bim);
             extractedText.append(text).append("\n");
+
+            List<Word> words = tesseract.getWords(bim, ITessAPI.TessPageIteratorLevel.RIL_WORD);
+            for (Word word : words) {
+                confidenceSum += word.getConfidence();
+                confidenceCount++;
+            }
         }
 
-        return extractedText.toString().trim();
+        double avgConfidence = confidenceCount > 0 ? confidenceSum / confidenceCount : 0;
+        return new OcrResult(extractedText.toString().trim(), avgConfidence);
     }
 
-    private String extractTextFromImage(File file) throws TesseractException {
-        return tesseract.doOCR(file).trim();
+    private OcrResult extractTextFromImage(File file) throws TesseractException, IOException {
+        String text = tesseract.doOCR(file).trim();
+
+        BufferedImage bim = ImageIO.read(file);
+        double avgConfidence = 0;
+        if (bim != null) {
+            List<Word> words = tesseract.getWords(bim, ITessAPI.TessPageIteratorLevel.RIL_WORD);
+            double confidenceSum = 0;
+            int confidenceCount = 0;
+            for (Word word : words) {
+                confidenceSum += word.getConfidence();
+                confidenceCount++;
+            }
+            avgConfidence = confidenceCount > 0 ? confidenceSum / confidenceCount : 0;
+        }
+
+        return new OcrResult(text, avgConfidence);
     }
 }
