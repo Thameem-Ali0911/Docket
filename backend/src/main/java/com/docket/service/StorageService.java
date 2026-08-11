@@ -68,4 +68,12 @@ public class StorageService {
             throw new ApiException(HttpStatus.INTERNAL_SERVER_ERROR, "STORAGE_ERROR", "Failed to store file.");
         }
     }
+
+    public java.io.File getFile(String fileUrl) {
+        if (fileUrl != null && fileUrl.startsWith("/uploads/")) {
+            String filename = fileUrl.substring("/uploads/".length());
+            return storageDirectory.resolve(filename).toFile();
+        }
+        return null;
+    }
 }

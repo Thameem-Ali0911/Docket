@@ -18,3 +18,8 @@ backend/src/main/resources/application-*.yml
 # OS files
 .DS_Store
 Thumbs.db
+
+# Agent files
+skills-lock.json
+.agents/
+.skills/

@@ -40,6 +40,12 @@ public class Document {
     @Column(name = "uploaded_at", insertable = false, updatable = false)
     private OffsetDateTime uploadedAt;
 
+    @Column(name = "extracted_text", columnDefinition = "TEXT")
+    private String extractedText;
+
+    @Column(name = "failed_reason")
+    private String failedReason;
+
     protected Document() {
         // JPA requires a no-arg constructor
     }
@@ -85,5 +91,21 @@ public class Document {
 
     public OffsetDateTime getUploadedAt() {
         return uploadedAt;
+    }
+
+    public String getExtractedText() {
+        return extractedText;
+    }
+
+    public void setExtractedText(String extractedText) {
+        this.extractedText = extractedText;
+    }
+
+    public String getFailedReason() {
+        return failedReason;
+    }
+
+    public void setFailedReason(String failedReason) {
+        this.failedReason = failedReason;
     }
 }

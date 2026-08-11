@@ -1,0 +1,3 @@
+ALTER TABLE documents 
+ADD COLUMN IF NOT EXISTS extracted_text TEXT,
+ADD COLUMN IF NOT EXISTS failed_reason VARCHAR(500);

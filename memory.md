@@ -42,12 +42,13 @@
 
 ## In Progress
 
-- Phase 3 Implementation Plan created and waiting for user review.
+- Phase 3 backend implementation (OCR + Text Extraction) completed. Waiting for manual frontend E2E verification of the extraction to complete the phase.
 
 ## Next Steps (in order)
 
-1. Wait for user approval on Phase 3 implementation plan.
-2. Execute Phase 3 OCR implementation.
+1. User to manually verify the Phase 2 file upload via frontend UI.
+2. User to manually verify the Phase 3 OCR text extraction (upload a scanned PDF or image and ensure extracted text is saved and visible in DB or debug view).
+3. If both tests pass, mark Phase 2 and Phase 3 as complete and move on to Phase 4 (LLM Field Extraction).
 
 ## Key Decisions & Why
 
@@ -181,3 +182,15 @@ npm run dev
 - Re-compiled backend and restarted backend container.
 - Tested/confirmed: Validated that the `/api/documents` endpoint now successfully returns `200 OK` without throwing serialization exceptions.
 - Next session should: User verify upload from frontend.
+
+### Session 10 — 2026-08-11
+- Implemented Phase 3 backend logic for OCR and text extraction.
+- Created `V3__add_extracted_text_to_documents.sql` to add `extracted_text` and `failed_reason` columns to the `documents` table.
+- Added `pdfbox` and `tess4j` dependencies to `backend/pom.xml`.
+- Updated `Document.java` entity to include `extractedText` and `failedReason` fields.
+- Created `OcrService.java` to extract text using Apache PDFBox for digital PDFs and Tess4J (OCR) as fallback for scanned documents and images.
+- Updated `DocumentService.java` to invoke `OcrService` synchronously on upload and update the document status to `PROCESSED` or `FAILED`.
+- Files touched: `backend/src/main/resources/db/migration/V3__add_extracted_text_to_documents.sql`, `backend/pom.xml`, `backend/src/main/java/com/docket/entity/Document.java`, `backend/src/main/java/com/docket/service/OcrService.java`, `backend/src/main/java/com/docket/service/DocumentService.java`, `backend/src/main/java/com/docket/service/StorageService.java`.
+- Tested/confirmed: Backend compiles successfully (`mvn clean compile`).
+- Still untested / follow-up: End-to-end verification of document upload and OCR text extraction from the frontend UI.
+- Next session should: Have the user manually verify document upload and OCR extraction.
