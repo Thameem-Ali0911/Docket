@@ -134,6 +134,8 @@ This builds and starts three containers together:
 
 Flyway migrations run automatically on backend startup, same as running natively. Stop everything with `Ctrl+C` or `docker compose down` (add `-v` to also wipe the Postgres volume). Rebuild after changing backend or frontend code with `docker compose up --build`.
 
+> ⚠️ **Don't mix Option A and Option B.** Docker's Postgres (in the `docket_pgdata` volume) and a native/local Postgres install are two completely separate databases, even though they can both listen on `localhost:5432`. If you alternate between `docker compose up` and `mvn spring-boot:run` against a locally installed Postgres, your data will appear to "disappear" — you're actually just landing on a different, empty database each time. Pick one and stick with it for local dev. The safest hybrid is: `docker compose up -d db` to start only the Postgres container, then run the backend natively with `mvn spring-boot:run` pointed at that same container on `localhost:5432` — that way both the containerized and native backend share the one persisted volume.
+
 ### Option B: Native (no Docker)
 
 See [`architecture.md`](./architecture.md) §8 for full prerequisites (JDK, Maven, Node, Postgres, Tesseract).
