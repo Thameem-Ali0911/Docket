@@ -1,10 +1,12 @@
 package com.docket.controller;
 
 import java.util.List;
+import java.util.Optional;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -13,6 +15,8 @@ import org.springframework.web.multipart.MultipartFile;
 
 import com.docket.entity.Document;
 import com.docket.entity.DocumentType;
+import com.docket.entity.Extraction;
+import com.docket.repository.ExtractionRepository;
 import com.docket.service.DocumentService;
 
 @RestController
@@ -20,9 +24,11 @@ import com.docket.service.DocumentService;
 public class DocumentController {
 
     private final DocumentService documentService;
+    private final ExtractionRepository extractionRepository;
 
-    public DocumentController(DocumentService documentService) {
+    public DocumentController(DocumentService documentService, ExtractionRepository extractionRepository) {
         this.documentService = documentService;
+        this.extractionRepository = extractionRepository;
     }
 
     /**
@@ -53,5 +59,23 @@ public class DocumentController {
         Integer userId = (Integer) authentication.getPrincipal();
         Document document = documentService.uploadDocument(userId, type, file);
         return ResponseEntity.ok(document);
+    }
+
+    /**
+     * Fetches the Gemini-extracted structured fields for a document, if any.
+     * Returns 200 with null body if extraction hasn't run/completed yet (e.g. still
+     * PENDING, or non-INVOICE type not supported until Phase 7) - frontend treats a
+     * null/empty response as "no extraction yet" rather than an error.
+     */
+    @GetMapping("/{id}/extraction")
+    public ResponseEntity<Extraction> getExtraction(
+            @PathVariable("id") Integer id,
+            Authentication authentication) {
+        Integer userId = (Integer) authentication.getPrincipal();
+        // Confirms the document belongs to the caller's workspace before exposing extraction data.
+        documentService.getDocumentForWorkspace(userId, id);
+
+        Optional<Extraction> extraction = extractionRepository.findByDocumentId(id);
+        return ResponseEntity.ok(extraction.orElse(null));
     }
 }

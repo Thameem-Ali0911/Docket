@@ -19,11 +19,14 @@ public class DocumentProcessingService {
     private final OcrService ocrService;
     private final StorageService storageService;
     private final DocumentRepository documentRepository;
+    private final ExtractionService extractionService;
 
-    public DocumentProcessingService(OcrService ocrService, StorageService storageService, DocumentRepository documentRepository) {
+    public DocumentProcessingService(OcrService ocrService, StorageService storageService,
+                                      DocumentRepository documentRepository, ExtractionService extractionService) {
         this.ocrService = ocrService;
         this.storageService = storageService;
         this.documentRepository = documentRepository;
+        this.extractionService = extractionService;
     }
 
     @Async
@@ -57,5 +60,11 @@ public class DocumentProcessingService {
             doc.setFailedReason("OCR failed: " + e.getMessage());
         }
         documentRepository.save(doc);
+
+        // Phase 4: run structured field extraction for successfully-OCR'd invoices.
+        // Contract/Resume extraction is added in Phase 7.
+        if (doc.getStatus() == DocumentStatus.PROCESSED && doc.getType() == com.docket.entity.DocumentType.INVOICE) {
+            extractionService.extractInvoiceFields(doc);
+        }
     }
 }

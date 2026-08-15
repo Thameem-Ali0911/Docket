@@ -52,5 +52,22 @@ public class DocumentService {
 
         return documentRepository.findByWorkspaceIdOrderByUploadedAtDesc(user.getWorkspace().getId());
     }
+
+    /**
+     * Fetches a single document, scoped to the requesting user's workspace so users
+     * can't read documents belonging to another workspace by guessing IDs.
+     */
+    public Document getDocumentForWorkspace(Integer userId, Integer documentId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "USER_NOT_FOUND", "User not found"));
+
+        Document doc = documentRepository.findById(documentId)
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "DOCUMENT_NOT_FOUND", "Document not found"));
+
+        if (!doc.getWorkspace().getId().equals(user.getWorkspace().getId())) {
+            throw new ApiException(HttpStatus.NOT_FOUND, "DOCUMENT_NOT_FOUND", "Document not found");
+        }
+        return doc;
+    }
 }
 
