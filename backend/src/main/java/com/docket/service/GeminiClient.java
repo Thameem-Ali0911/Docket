@@ -66,8 +66,8 @@ public class GeminiClient {
             content.putArray("parts").addObject().put("text", prompt);
 
             ObjectNode generationConfig = requestBody.putObject("generationConfig");
-generationConfig.put("responseMimeType", "application/json");
-generationConfig.set("responseSchema", schemaNode);
+            generationConfig.put("responseMimeType", "application/json");
+            generationConfig.set("responseSchema", schemaNode);
 
             String requestJson = objectMapper.writeValueAsString(requestBody);
             String url = String.format(ENDPOINT_TEMPLATE, model);
