@@ -10,8 +10,15 @@ export default function Dashboard() {
     const [user, setUser] = useState(null);
     const [documents, setDocuments] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [loadError, setLoadError] = useState(null);
 
     useEffect(() => {
+        loadDashboard();
+    }, [navigate]);
+
+    function loadDashboard() {
+        setLoading(true);
+        setLoadError(null);
         // Fetch user and workspace documents in parallel
         Promise.all([
             apiFetch('/api/auth/me'),
@@ -21,13 +28,19 @@ export default function Dashboard() {
                 setUser(userData);
                 setDocuments(docsData);
             })
-            .catch(() => {
-                // Token is invalid/expired — send back to login
-                clearToken();
-                navigate('/login', { replace: true });
+            .catch((err) => {
+                if (err.status === 401) {
+                    // Token is genuinely invalid/expired — send back to login
+                    clearToken();
+                    navigate('/login', { replace: true });
+                    return;
+                }
+                // Any other failure (backend momentarily busy with OCR/Gemini
+                // work, transient 500, network blip) shouldn't wipe a valid login.
+                setLoadError(err.message || 'Failed to load dashboard.');
             })
             .finally(() => setLoading(false));
-    }, [navigate]);
+    }
 
     function handleLogout() {
         clearToken();
@@ -39,6 +52,18 @@ export default function Dashboard() {
             <div className="min-h-screen flex items-center justify-center"
                  style={{ background: 'var(--color-bg)' }}>
                 <p style={{ color: 'var(--color-text-secondary)' }}>Loading…</p>
+            </div>
+        );
+    }
+
+    if (loadError) {
+        return (
+            <div className="min-h-screen flex items-center justify-center px-6"
+                 style={{ background: 'var(--color-bg)' }}>
+                <div className="card p-8 text-center" style={{ maxWidth: '420px' }}>
+                    <p className="alert-error" style={{ marginBottom: '16px' }}>{loadError}</p>
+                    <button className="btn-primary" onClick={loadDashboard}>Retry</button>
+                </div>
             </div>
         );
     }

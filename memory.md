@@ -18,7 +18,7 @@
 
 - **Active Phase:** Phase 5 — Summarization, not yet started
 - **Last Updated:** 2026-08-15
-- **Overall Progress:** ~65% — Phases 0-4 complete. `DocumentDetail.jsx` built (extracted fields + line items table next to a file preview), wired to `GET /api/documents/{id}/extraction`, frontend builds cleanly (`npm run build`). Phase 4's Definition of Done is met pending the user's manual 8/10-invoice UI check.
+- **Overall Progress:** ~65% — Phases 0-4 complete. `DocumentDetail.jsx` built and two post-build bugs fixed (forced re-login on transient errors, iframe preview blocked by X-Frame-Options). Phase 4's Definition of Done is met pending the user's manual 8/10-invoice UI check with these fixes in place.
 
 ## Completed
 
@@ -272,3 +272,15 @@ npm run dev
 - Still untested / follow-up: User to `docker compose up -d` (rebuild frontend image first if needed) and click through `DocumentDetail.jsx` for a few real uploaded invoices to confirm the fields render correctly end-to-end and to formally satisfy Phase 4's "8/10 test invoices" Definition of Done.
 - Files touched: `frontend/src/pages/DocumentDetail.jsx` (new), `frontend/src/App.jsx`, `frontend/src/pages/Dashboard.jsx`, `memory.md`.
 - Next session should: Once the user confirms `DocumentDetail.jsx` looks correct against real data, start Phase 5 (Summarization) per phases.md — `prompt/SummarizePrompt.java`, `service/SummarizeService.java`, `summaries` table, and a "Summary" card added to `DocumentDetail.jsx`.
+
+### Session 19 — 2026-08-15
+- User reported two symptoms after testing Session 18's `DocumentDetail.jsx`: (1) uploads occasionally forced a re-login after a few refreshes, (2) a browser console error `Refused to display 'http://localhost:8080/' in a frame because it set 'X-Frame-Options' to 'deny'`.
+- **Investigated the FAILED-status document first** - user confirmed it was a test invoice deliberately crafted to fail OCR, so `DocumentStatus.FAILED` there is correct behavior (per Session 11's confidence-check logic), not a bug.
+- **Root cause of forced re-login**: `apiFetch()` in `lib/api.js` threw a generic `Error` with no status code attached. `Dashboard.jsx` and `DocumentDetail.jsx` then caught *any* failure - a transient 500, a network blip, even a slow response while the backend was busy doing synchronous OCR/Gemini work right after an upload - and unconditionally treated it as an expired token: cleared it and redirected to `/login`. A momentary backend hiccup was silently logging the user out.
+  - Fix: `apiFetch` now attaches `error.status = response.status` to thrown errors. `Dashboard.jsx` and `DocumentDetail.jsx` only clear the token and redirect on `error.status === 401`; any other failure now shows an inline error state instead (`Dashboard.jsx` gets a "Retry" button).
+- **Root cause of the X-Frame-Options console error**: `DocumentDetail.jsx`'s `<iframe>` file preview (added in Session 18) loads `http://localhost:8080/uploads/...` inside a page served from `http://localhost:5173` - Spring Security's default `X-Frame-Options: DENY` header blocks this, and since the frontend and backend are different origins (different ports), `SAMEORIGIN` wouldn't have fixed it either.
+  - Fix: `SecurityConfig.java` now disables `frameOptions` globally (`headers(headers -> headers.frameOptions(frame -> frame.disable()))`). Scoped reasoning: the backend serves no HTML of its own (pure REST API + static `/uploads` files), so there's no clickjacking surface to protect with that header here.
+- Files touched: `frontend/src/lib/api.js`, `frontend/src/pages/Dashboard.jsx`, `frontend/src/pages/DocumentDetail.jsx`, `backend/src/main/java/com/docket/config/SecurityConfig.java`, `memory.md`.
+- Tested/confirmed: `npm install && npm run build` succeeds cleanly for the frontend changes. **Backend change not compiled** - same sandbox limitation as prior sessions (no route to Maven Central here); the `frameOptions(frame -> frame.disable())` call matches Spring Security's standard documented idiom, so it should compile, but needs a real `./mvnw clean compile` to confirm.
+- Still untested / follow-up: (1) User to run `./mvnw clean compile` (or let Docker's build stage do it) to confirm `SecurityConfig.java` compiles. (2) Rebuild both `backend` and `frontend` containers (`docker compose up -d --build backend frontend`) and re-verify: the iframe preview now loads instead of erroring, and a slow/failed request no longer forces a re-login. (3) Still worth keeping an eye out for whether re-logins recur even after this fix - if so, capture the actual HTTP status/response next time to rule out a genuine JWT/session issue.
+- Next session should: Confirm both fixes work end-to-end in the browser, then proceed to Phase 5 (Summarization) as previously planned.

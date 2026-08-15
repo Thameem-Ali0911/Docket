@@ -33,6 +33,13 @@ public class SecurityConfig {
                 .cors((cors) -> cors.configurationSource(corsConfigurationSource()))
                 .sessionManagement((session) ->
                         session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                // The backend serves no HTML of its own (pure REST API + static /uploads
+                // files), so it's safe to drop Spring Security's default
+                // X-Frame-Options: DENY here. Without this, DocumentDetail.jsx's <iframe>
+                // preview of an uploaded file is blocked by the browser, since the
+                // frontend (localhost:5173) and backend (localhost:8080) are different
+                // origins and SAMEORIGIN wouldn't help either.
+                .headers((headers) -> headers.frameOptions((frame) -> frame.disable()))
                 .authorizeHttpRequests((requests) -> requests
                         .requestMatchers("/api/health",
                                          "/api/auth/signup",

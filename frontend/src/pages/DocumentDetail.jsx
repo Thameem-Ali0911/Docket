@@ -46,12 +46,15 @@ export default function DocumentDetail() {
                     }
                 }
             })
-            .catch(() => {
-                // Matches Dashboard.jsx's approach: any fetch failure here is treated
-                // as an expired/invalid token rather than surfacing a raw error, since
-                // both endpoints require auth and a 401 is the most likely cause.
-                clearToken();
-                navigate('/login', { replace: true });
+            .catch((err) => {
+                if (err.status === 401) {
+                    clearToken();
+                    navigate('/login', { replace: true });
+                    return;
+                }
+                // Any other failure (transient 500, backend momentarily busy, network
+                // blip) shouldn't wipe a valid login — surface it instead.
+                setError(err.message || 'Failed to load document.');
             })
             .finally(() => setLoading(false));
     }, [id, navigate]);
