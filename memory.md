@@ -16,9 +16,9 @@
 
 ## Current Status
 
-- **Active Phase:** Phase 3 — OCR + Text Extraction Pipeline
-- **Last Updated:** 2026-08-08
-- **Overall Progress:** ~45% — Phase 2 complete and verified. Moving on to OCR Extraction (Phase 3).
+- **Active Phase:** Phase 4 — LLM Field Extraction (Invoice), in progress
+- **Last Updated:** 2026-08-15
+- **Overall Progress:** ~55% — Phases 0-3 complete and verified. Phase 4 backend built (Gemini extraction wired into the OCR pipeline); currently debugging the Gemini structured-output request shape against the live API. Frontend (`DocumentDetail.jsx`) not started yet.
 
 ## Completed
 
@@ -39,16 +39,18 @@
 - [x] Phase 2: Created `Document` entity, `StorageService`, `DocumentController`, and DB migration.
 - [x] Phase 2: Added `UploadDocument.jsx` and updated `Dashboard.jsx` to list documents. Both backend and frontend compile successfully.
 - [x] Phase 2: E2E Auth verified. User can successfully sign up, log in, upload document, and view dashboard against a running backend via browser.
+- [x] Phase 3: OCR + text extraction pipeline (`OcrService`, PDFBox + Tess4J fallback, confidence-based failure detection). Verified working end-to-end in Docker (Session 12) and confirmed via a real `mvn clean compile` build (Session 13).
+- [x] Phase 4 (backend, partial): `extractions` table/migration, `Extraction` entity, `InvoiceExtractionDto`, `ExtractInvoicePrompt`, `GeminiClient`, `ExtractionService`, wired into the async OCR pipeline, `GET /api/documents/{id}/extraction` endpoint. Compiles successfully (Session 14). Live API call currently failing on request-shape mismatch, fix applied but not yet re-verified (Session 15).
 
 ## In Progress
 
-- Phase 3 backend implementation (OCR + Text Extraction) completed. Waiting for manual frontend E2E verification of the extraction to complete the phase.
+- Phase 4: re-verifying the Gemini extraction call end-to-end after switching `GeminiClient` from the nested `responseFormat.text` shape (rejected by the live API with HTTP 400) to the flat `responseMimeType`/`responseSchema` shape. Once a real invoice successfully produces populated `fields_json`, build `DocumentDetail.jsx` to display the extracted fields.
 
 ## Next Steps (in order)
 
-1. User to manually verify the Phase 2 file upload via frontend UI.
-2. User to manually verify the Phase 3 OCR text extraction (upload a scanned PDF or image and ensure extracted text is saved and visible in DB or debug view).
-3. If both tests pass, mark Phase 2 and Phase 3 as complete and move on to Phase 4 (LLM Field Extraction).
+1. User to recompile (`./mvnw clean compile`) after the `GeminiClient` flat-shape fix.
+2. User to re-upload a test invoice and confirm the `extractions` table now shows populated `fields_json` instead of a `failed_reason`.
+3. Once extraction succeeds end-to-end, build `DocumentDetail.jsx` (extracted fields table next to file preview) to complete Phase 4's Definition of Done, then move to Phase 5 (Summarization).
 
 ## Key Decisions & Why
 
@@ -234,3 +236,11 @@ npm run dev
 - Tested/confirmed: Manual brace/paren balance check on all new/changed files (this sandbox still has no route to Maven Central, same limitation as Sessions 10–13) — **not yet compiled**. Endpoint/request shape verified against live docs, not against an actual Gemini API call.
 - Still untested / follow-up: (1) User to run `./mvnw clean compile` locally to confirm this all actually compiles (expect it should, but Session 13 showed hand-verification isn't a substitute for the real build). (2) Actually exercise the flow end-to-end with a real `GEMINI_API_KEY` and a sample invoice — confirm the nested `responseFormat.text.schema` shape is accepted as-is by the live API (see note above re: possible flat-shape fallback) and that `InvoiceExtractionDto` deserializes cleanly from a real response. (3) `DocumentDetail.jsx` frontend work (table showing extracted fields next to the file preview, per phases.md Phase 4) has not been started yet — backend only so far.
 - Next session should: Compile-check, then either fix the Gemini request shape if the live API rejects it, or move straight to the `DocumentDetail.jsx` frontend piece once a real extraction has been confirmed working end-to-end.
+
+### Session 15 — 2026-08-15 
+- User compiled Session 14's code successfully (`BUILD SUCCESS`, 33 source files), then ran it end-to-end against the real Gemini API with `GEMINI_API_KEY` set. Confirmed via the `extractions` table: the exact fallback risk flagged in Session 14 materialized - Gemini returned **HTTP 400**: `Invalid value at 'generation_config.response_format.text.mime_type'`.
+- Root cause: the newer nested `generationConfig.responseFormat.text.mimeType` field is typed as an enum server-side, not a free string - sending `"application/json"` as a plain string is rejected.
+- Fix: switched `GeminiClient.java` to the older, stable flat shape - `generationConfig.responseMimeType: "application/json"` + `generationConfig.responseSchema: <schema object>` - well-established across Google's own SDKs/examples, takes a plain MIME string.
+- Files touched: `service/GeminiClient.java`, `memory.md`.
+- Still untested / follow-up: (1) Recompile to confirm no syntax issues. (2) Re-upload the same test invoice and confirm `fields_json` now populates. (3) If this also fails, capture the exact new error - don't guess blind again.
+- Next session should: Re-test end-to-end with the flat-shape fix. Once a real extraction succeeds, move to `DocumentDetail.jsx`.
