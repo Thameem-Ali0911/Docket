@@ -67,9 +67,13 @@ public class ExtractionService {
                 return;
             }
 
+            // Same NUL-byte issue as extractedText (see DocumentProcessingService) can show up
+            // here too, since Gemini may echo back snippets of the source text verbatim into
+            // the JSON fields it returns - sanitize before persisting for the same reason.
+            String sanitizedJson = stripNulBytes(rawJson);
             Extraction extraction = extractionRepository.findByDocumentId(document.getId())
-                .orElse(new Extraction(document, rawJson));
-            extraction.setFieldsJson(rawJson);
+                .orElse(new Extraction(document, sanitizedJson));
+            extraction.setFieldsJson(sanitizedJson);
             extraction.setFailedReason(null);
             extractionRepository.save(extraction);
         } catch (GeminiClient.GeminiException e) {
@@ -90,7 +94,7 @@ public class ExtractionService {
         try {
             Extraction extraction = extractionRepository.findByDocumentId(document.getId())
                 .orElse(new Extraction(document, "{}"));
-            extraction.setFailedReason(reason);
+            extraction.setFailedReason(stripNulBytes(reason));
             extractionRepository.save(extraction);
         } catch (Throwable t) {
             // Last line of defense - if we can't even persist the failure reason (DB blip,
@@ -98,5 +102,17 @@ public class ExtractionService {
             log.error("Could not persist extraction failure for document id={} (reason was: {})",
                 document.getId(), reason, t);
         }
+    }
+
+    /**
+     * PostgreSQL's text/UTF8 columns reject NUL (0x00) bytes outright. See the identical
+     * helper in DocumentProcessingService for the full explanation - this is the same fix
+     * applied to the extraction side of the pipeline.
+     */
+    private String stripNulBytes(String text) {
+        if (text == null) {
+            return null;
+        }
+        return text.indexOf('\u0000') == -1 ? text : text.replace("\u0000", "");
     }
 }

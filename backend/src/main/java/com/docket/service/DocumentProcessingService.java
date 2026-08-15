@@ -58,7 +58,13 @@ public class DocumentProcessingService {
                         "OCR confidence too low (%.0f%%) - extracted text is likely inaccurate.",
                         result.getConfidence()));
                 } else {
-                    doc.setExtractedText(extractedText);
+                    // PostgreSQL's text columns cannot store a NUL byte (0x00) under any
+                    // encoding - some PDFs (particularly ones with unusual embedded/custom
+                    // font encodings) yield a text-layer extraction that contains one, which
+                    // previously blew up the save below with no error handling around it at
+                    // all. Stripping NULs here is safe: they're never meaningful in extracted
+                    // invoice text and this keeps the save from failing on otherwise-valid text.
+                    doc.setExtractedText(stripNulBytes(extractedText));
                     doc.setStatus(DocumentStatus.PROCESSED);
                 }
             } else {
@@ -98,5 +104,16 @@ public class DocumentProcessingService {
     private String summarize(Throwable t) {
         String message = t.getMessage();
         return t.getClass().getSimpleName() + (message != null ? ": " + message : "");
+    }
+
+    /**
+     * Removes NUL (0x00) characters from extracted text. PostgreSQL's text/UTF8 columns
+     * reject NUL bytes outright regardless of encoding, so any extraction that happens to
+     * contain one (seen in practice with PDFs using unusual embedded font encodings) would
+     * otherwise fail the save with a DataIntegrityViolationException every single time,
+     * permanently blocking that document from ever reaching PROCESSED.
+     */
+    private String stripNulBytes(String text) {
+        return text.indexOf('\u0000') == -1 ? text : text.replace("\u0000", "");
     }
 }
