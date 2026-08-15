@@ -18,7 +18,7 @@
 
 - **Active Phase:** Phase 4 — LLM Field Extraction (Invoice), in progress
 - **Last Updated:** 2026-08-15
-- **Overall Progress:** ~55% — Phases 0-3 complete and verified. Phase 4 backend built (Gemini extraction wired into the OCR pipeline); currently debugging the Gemini structured-output request shape against the live API. Frontend (`DocumentDetail.jsx`) not started yet.
+- **Overall Progress:** ~60% — Phases 0-3 complete and verified. Phase 4 backend complete and **verified working end-to-end against the live Gemini API** (real invoice → populated structured fields). Only remaining Phase 4 item is the `DocumentDetail.jsx` frontend.
 
 ## Completed
 
@@ -40,17 +40,17 @@
 - [x] Phase 2: Added `UploadDocument.jsx` and updated `Dashboard.jsx` to list documents. Both backend and frontend compile successfully.
 - [x] Phase 2: E2E Auth verified. User can successfully sign up, log in, upload document, and view dashboard against a running backend via browser.
 - [x] Phase 3: OCR + text extraction pipeline (`OcrService`, PDFBox + Tess4J fallback, confidence-based failure detection). Verified working end-to-end in Docker (Session 12) and confirmed via a real `mvn clean compile` build (Session 13).
-- [x] Phase 4 (backend, partial): `extractions` table/migration, `Extraction` entity, `InvoiceExtractionDto`, `ExtractInvoicePrompt`, `GeminiClient`, `ExtractionService`, wired into the async OCR pipeline, `GET /api/documents/{id}/extraction` endpoint. Compiles successfully (Session 14). Live API call currently failing on request-shape mismatch, fix applied but not yet re-verified (Session 15).
+- [x] Phase 4 (backend, complete): `extractions` table/migration, `Extraction` entity, `InvoiceExtractionDto`, `ExtractInvoicePrompt`, `GeminiClient`, `ExtractionService`, wired into the async OCR pipeline, `GET /api/documents/{id}/extraction` endpoint. **Verified end-to-end against the live Gemini API (`gemini-3.5-flash-lite`)** — real invoice produced correct structured fields (Session 16).
 
 ## In Progress
 
-- Phase 4: re-verifying the Gemini extraction call end-to-end after switching `GeminiClient` from the nested `responseFormat.text` shape (rejected by the live API with HTTP 400) to the flat `responseMimeType`/`responseSchema` shape. Once a real invoice successfully produces populated `fields_json`, build `DocumentDetail.jsx` to display the extracted fields.
+- Phase 4: building `DocumentDetail.jsx` (extracted fields table next to file preview) — the last item needed to close out Phase 4's Definition of Done.
 
 ## Next Steps (in order)
 
-1. User to recompile (`./mvnw clean compile`) after the `GeminiClient` flat-shape fix.
-2. User to re-upload a test invoice and confirm the `extractions` table now shows populated `fields_json` instead of a `failed_reason`.
-3. Once extraction succeeds end-to-end, build `DocumentDetail.jsx` (extracted fields table next to file preview) to complete Phase 4's Definition of Done, then move to Phase 5 (Summarization).
+1. Build `DocumentDetail.jsx`: fetch `GET /api/documents/{id}/extraction`, render extracted fields (vendor, invoice #, dates, total, line items table) next to a preview of the original file.
+2. Quick UTF-8 sanity check on currency symbol rendering once that page exists (a `psql` terminal display quirk was noted in Session 16, likely not a real data issue).
+3. Once Phase 4 is fully closed out, move to Phase 5 (Summarization).
 
 ## Key Decisions & Why
 
@@ -243,4 +243,12 @@ npm run dev
 - Fix: switched `GeminiClient.java` to the older, stable flat shape - `generationConfig.responseMimeType: "application/json"` + `generationConfig.responseSchema: <schema object>` - well-established across Google's own SDKs/examples, takes a plain MIME string.
 - Files touched: `service/GeminiClient.java`, `memory.md`.
 - Still untested / follow-up: (1) Recompile to confirm no syntax issues. (2) Re-upload the same test invoice and confirm `fields_json` now populates. (3) If this also fails, capture the exact new error - don't guess blind again.
-- Next session should: Re-test end-to-end with the flat-shape fix. Once a real extraction succeeds, move to `DocumentDetail.jsx`.
+- Next session should: Re-test end-to-end with the flat-shape fix. Once a real extraction succeeds, move to the `DocumentDetail.jsx` frontend piece (Phase 4's remaining item).
+
+### Session 16 — 2026-08-15 (same day, later still)
+- Root cause of Session 15's fix appearing not to work: the flat-shape code change was correct on disk, but the running backend process (Docker container / `mvnw spring-boot:run`) was never restarted, so it kept serving the old compiled classes - `mvn clean compile` alone doesn't restart a running app. Confirmed by having the user paste the actual running `GeminiClient.generateStructuredJson` source, which already had the flat-shape fix with no trace of the old `responseFormat.text` code, proving the *code* wasn't the problem.
+- User did a full `docker compose down` + `docker compose up --build backend` (fresh container, not just a rebuild) and re-uploaded a new test invoice.
+- **Confirmed working end-to-end**: `extractions` row for document 19 shows populated `fields_json` (vendorName "ACME DIGITAL SOLUTIONS", invoiceNumber "INV-2026-00417", invoiceDate "08 Aug 2026", totalAmount, lineItems array with description/amount) and an empty `failed_reason`. **Phase 4 backend (Gemini invoice extraction) is now verified functional against the live API**, using `gemini-3.5-flash-lite` and the flat `responseMimeType`/`responseSchema` request shape.
+- Note: `totalAmount` rendered with a corrupted/placeholder-looking currency symbol ("■99,120.00") in the psql terminal output - almost certainly a terminal encoding/font issue displaying the ₹ (rupee) symbol, not a data problem, but worth a quick visual sanity check once the frontend renders it properly with UTF-8.
+- Files touched: `memory.md` only (no code changes this session - purely a deploy/restart issue, not a bug).
+- Next session should: Build `DocumentDetail.jsx` - a page showing the extracted invoice fields (vendor, invoice #, dates, total, line items table) next to a preview of the original uploaded file, per phases.md Phase 4. This is the last remaining item to close out Phase 4's Definition of Done. Also do a quick UTF-8 rendering check on currency symbols once that page exists.
