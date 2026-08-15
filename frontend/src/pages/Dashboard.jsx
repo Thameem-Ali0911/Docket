@@ -130,8 +130,11 @@ export default function Dashboard() {
                                             {new Date(doc.uploadedAt).toLocaleString()}
                                         </td>
                                         <td className="py-3 px-4 text-right">
-                                            {/* Phase 3 placeholder */}
-                                            <button className="text-sm font-medium" style={{ color: 'var(--color-primary)' }} disabled>
+                                            <button
+                                                className="text-sm font-medium hover:underline"
+                                                style={{ color: 'var(--color-primary)' }}
+                                                onClick={() => navigate(`/documents/${doc.id}`)}
+                                            >
                                                 View
                                             </button>
                                         </td>

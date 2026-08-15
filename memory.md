@@ -16,9 +16,9 @@
 
 ## Current Status
 
-- **Active Phase:** Phase 4 — LLM Field Extraction (Invoice), in progress
+- **Active Phase:** Phase 5 — Summarization, not yet started
 - **Last Updated:** 2026-08-15
-- **Overall Progress:** ~60% — Phases 0-3 complete and verified. Phase 4 backend complete and **verified working end-to-end against the live Gemini API** (real invoice → populated structured fields). Only remaining Phase 4 item is the `DocumentDetail.jsx` frontend.
+- **Overall Progress:** ~65% — Phases 0-4 complete. `DocumentDetail.jsx` built (extracted fields + line items table next to a file preview), wired to `GET /api/documents/{id}/extraction`, frontend builds cleanly (`npm run build`). Phase 4's Definition of Done is met pending the user's manual 8/10-invoice UI check.
 
 ## Completed
 
@@ -41,16 +41,17 @@
 - [x] Phase 2: E2E Auth verified. User can successfully sign up, log in, upload document, and view dashboard against a running backend via browser.
 - [x] Phase 3: OCR + text extraction pipeline (`OcrService`, PDFBox + Tess4J fallback, confidence-based failure detection). Verified working end-to-end in Docker (Session 12) and confirmed via a real `mvn clean compile` build (Session 13).
 - [x] Phase 4 (backend, complete): `extractions` table/migration, `Extraction` entity, `InvoiceExtractionDto`, `ExtractInvoicePrompt`, `GeminiClient`, `ExtractionService`, wired into the async OCR pipeline, `GET /api/documents/{id}/extraction` endpoint. **Verified end-to-end against the live Gemini API (`gemini-3.5-flash-lite`)** — real invoice produced correct structured fields (Session 16).
+- [x] Phase 4 (frontend, complete): `DocumentDetail.jsx` — fetches the document + its extraction, renders vendor/invoice#/dates/total fields and a line-items table next to an `<iframe>` preview of the original file (with an "open in new tab" fallback link); handles PENDING/failed/no-extraction states. `Dashboard.jsx`'s "View" button now links to `/documents/:id`, route added in `App.jsx`. Currency values render through normal React text rendering (no manual encoding/escaping), so the ₹ symbol renders as plain UTF-8 — the Session 16 `psql` terminal glitch does not apply to the browser. Frontend builds cleanly (`npm run build`, Session 18).
 
 ## In Progress
 
-- Phase 4: building `DocumentDetail.jsx` (extracted fields table next to file preview) — the last item needed to close out Phase 4's Definition of Done.
+- None — Phase 4 is code-complete. Awaiting the user's manual pass of ≥8/10 test invoices through the full UI to formally close out the Definition of Done before starting Phase 5.
 
 ## Next Steps (in order)
 
-1. Build `DocumentDetail.jsx`: fetch `GET /api/documents/{id}/extraction`, render extracted fields (vendor, invoice #, dates, total, line items table) next to a preview of the original file.
-2. Quick UTF-8 sanity check on currency symbol rendering once that page exists (a `psql` terminal display quirk was noted in Session 16, likely not a real data issue).
-3. Once Phase 4 is fully closed out, move to Phase 5 (Summarization).
+1. User to run `docker compose up -d` (or rebuild frontend) and manually verify `DocumentDetail.jsx` against real uploaded invoices — confirm ≥8/10 test invoices show correct fields, to satisfy Phase 4's Definition of Done.
+2. Visually confirm the ₹ (or other) currency symbol renders correctly in the browser (expected to be fine — see Completed note above).
+3. Once confirmed, start Phase 5 (Summarization): `prompt/SummarizePrompt.java`, `service/SummarizeService.java`, `summaries` table, and a "Summary" card in `DocumentDetail.jsx`.
 
 ## Key Decisions & Why
 
@@ -261,3 +262,13 @@ npm run dev
 - Also: prefer `docker compose restart <service>` or `docker compose up -d` (no service name, brings up everything) over `docker compose down` + a scoped `up --build <service>`, since the latter tears down all containers but only recreates the one named.
 - Files touched: `memory.md` only (no code changes this session - deploy/tooling issue, not a bug).
 - Next session should: Build `DocumentDetail.jsx` per phases.md Phase 4 (still the last remaining item), then the UTF-8 currency check, then move to Phase 5.
+
+### Session 18 — 2026-08-15
+- Built the last remaining Phase 4 item: `frontend/src/pages/DocumentDetail.jsx`. Fetches `GET /api/documents` (to locate the doc by id — no single-document-by-id endpoint exists yet, reused the existing list endpoint) and `GET /api/documents/{id}/extraction` in parallel, parses `fieldsJson`, and renders vendor/invoice#/invoice date/due date/total plus a line-items table, next to an `<iframe>` preview of the original file with an "open in new tab" link. Handles three non-happy-path states explicitly: document still `PENDING` (no extraction yet), extraction `failedReason` present, and no extraction row at all.
+- Wired the route: added `/documents/:id` (protected) in `App.jsx`, and changed `Dashboard.jsx`'s disabled "View" button (a Phase 3 placeholder) to navigate there.
+- Styling reuses the existing `.card`/`.badge`/design-token classes from `index.css` per `design.md` — no new CSS added.
+- Re: the Session 16 UTF-8/currency note — confirmed this was specific to the `psql` terminal, not a real concern: `totalAmount` is rendered via normal JSX text interpolation, which is UTF-8 by default in the browser, so no special handling was needed.
+- Tested/confirmed: `npm install` + `npm run build` succeeds cleanly (Vite, 31 modules, no errors) in this sandbox. **Not yet run against a live backend/Gemini extraction in a browser** — no Docker/network access here for that.
+- Still untested / follow-up: User to `docker compose up -d` (rebuild frontend image first if needed) and click through `DocumentDetail.jsx` for a few real uploaded invoices to confirm the fields render correctly end-to-end and to formally satisfy Phase 4's "8/10 test invoices" Definition of Done.
+- Files touched: `frontend/src/pages/DocumentDetail.jsx` (new), `frontend/src/App.jsx`, `frontend/src/pages/Dashboard.jsx`, `memory.md`.
+- Next session should: Once the user confirms `DocumentDetail.jsx` looks correct against real data, start Phase 5 (Summarization) per phases.md — `prompt/SummarizePrompt.java`, `service/SummarizeService.java`, `summaries` table, and a "Summary" card added to `DocumentDetail.jsx`.

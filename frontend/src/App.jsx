@@ -3,6 +3,7 @@ import Login from './pages/Login';
 import Signup from './pages/Signup';
 import Dashboard from './pages/Dashboard';
 import UploadDocument from './pages/UploadDocument';
+import DocumentDetail from './pages/DocumentDetail';
 import ProtectedRoute from './components/ProtectedRoute';
 
 function App() {
@@ -25,6 +26,14 @@ function App() {
                     element={
                         <ProtectedRoute>
                             <UploadDocument />
+                        </ProtectedRoute>
+                    }
+                />
+                <Route
+                    path="/documents/:id"
+                    element={
+                        <ProtectedRoute>
+                            <DocumentDetail />
                         </ProtectedRoute>
                     }
                 />
