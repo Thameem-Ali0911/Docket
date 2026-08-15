@@ -46,12 +46,24 @@ public class OcrService {
      */
     public OcrResult extractText(File file) throws Exception {
         String fileName = file.getName().toLowerCase();
-        if (fileName.endsWith(".pdf")) {
-            return extractTextFromPdf(file);
-        } else if (fileName.endsWith(".png") || fileName.endsWith(".jpg") || fileName.endsWith(".jpeg")) {
-            return extractTextFromImage(file);
-        } else {
-            throw new IllegalArgumentException("Unsupported file type for OCR: " + fileName);
+        try {
+            if (fileName.endsWith(".pdf")) {
+                return extractTextFromPdf(file);
+            } else if (fileName.endsWith(".png") || fileName.endsWith(".jpg") || fileName.endsWith(".jpeg")) {
+                return extractTextFromImage(file);
+            } else {
+                throw new IllegalArgumentException("Unsupported file type for OCR: " + fileName);
+            }
+        } catch (Exception e) {
+            throw e;
+        } catch (Throwable t) {
+            // Tess4J/Tesseract is a native (JNI) library - a missing/mismatched native binary
+            // or tessdata path surfaces as an Error (UnsatisfiedLinkError, NoClassDefFoundError),
+            // not an Exception. Re-wrap as a checked Exception so every caller's normal
+            // `catch (Exception e)` handling actually catches this instead of it silently
+            // killing whatever thread is running OCR.
+            throw new Exception("Native OCR engine failure: " + t.getClass().getSimpleName()
+                + (t.getMessage() != null ? " - " + t.getMessage() : ""), t);
         }
     }
 

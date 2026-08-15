@@ -6,6 +6,8 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -24,6 +26,8 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
  */
 @Service
 public class GeminiClient {
+
+    private static final Logger log = LoggerFactory.getLogger(GeminiClient.class);
 
     private static final String ENDPOINT_TEMPLATE =
         "https://generativelanguage.googleapis.com/v1beta/models/%s:generateContent";
@@ -99,7 +103,13 @@ public class GeminiClient {
             return parts.get(0).path("text").asText();
         } catch (GeminiException e) {
             throw e;
+        } catch (InterruptedException e) {
+            // Restore the interrupt flag instead of swallowing it - letting it disappear
+            // makes the thread pool unable to respond correctly to shutdown/cancellation.
+            Thread.currentThread().interrupt();
+            throw new GeminiException("Gemini call was interrupted: " + e.getMessage(), e);
         } catch (Exception e) {
+            log.error("Gemini API call failed", e);
             throw new GeminiException("Failed to call Gemini API: " + e.getMessage(), e);
         }
     }

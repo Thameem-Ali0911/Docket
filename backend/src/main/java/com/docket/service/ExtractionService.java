@@ -7,6 +7,8 @@ import jakarta.validation.ValidatorFactory;
 
 import java.util.Set;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import com.docket.dto.InvoiceExtractionDto;
@@ -18,6 +20,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 @Service
 public class ExtractionService {
+
+    private static final Logger log = LoggerFactory.getLogger(ExtractionService.class);
 
     private final GeminiClient geminiClient;
     private final ExtractionRepository extractionRepository;
@@ -72,13 +76,27 @@ public class ExtractionService {
             saveFailure(document, "Gemini extraction failed: " + e.getMessage());
         } catch (Exception e) {
             saveFailure(document, "Could not parse Gemini's response as valid invoice JSON: " + e.getMessage());
+        } catch (Throwable t) {
+            // Defense in depth: JSON parsing, validation, or serialization libraries could in
+            // principle throw an Error (e.g. StackOverflowError on a pathological response).
+            // Never let extraction die silently - always leave a visible failure record.
+            log.error("Unexpected failure during invoice field extraction for document id={}",
+                document.getId(), t);
+            saveFailure(document, "Unexpected extraction failure: " + t.getClass().getSimpleName());
         }
     }
 
     private void saveFailure(Document document, String reason) {
-        Extraction extraction = extractionRepository.findByDocumentId(document.getId())
-            .orElse(new Extraction(document, "{}"));
-        extraction.setFailedReason(reason);
-        extractionRepository.save(extraction);
+        try {
+            Extraction extraction = extractionRepository.findByDocumentId(document.getId())
+                .orElse(new Extraction(document, "{}"));
+            extraction.setFailedReason(reason);
+            extractionRepository.save(extraction);
+        } catch (Throwable t) {
+            // Last line of defense - if we can't even persist the failure reason (DB blip,
+            // constraint issue), at least log it loudly instead of losing it silently.
+            log.error("Could not persist extraction failure for document id={} (reason was: {})",
+                document.getId(), reason, t);
+        }
     }
 }

@@ -8,6 +8,8 @@ import java.nio.file.StandardCopyOption;
 import java.util.List;
 import java.util.UUID;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
@@ -17,6 +19,8 @@ import com.docket.exception.ApiException;
 
 @Service
 public class StorageService {
+
+    private static final Logger log = LoggerFactory.getLogger(StorageService.class);
 
     private final Path storageDirectory = Paths.get("uploads");
 
@@ -65,15 +69,27 @@ public class StorageService {
             // Return URL path where it can be accessed
             return "/uploads/" + uniqueFileName;
         } catch (IOException e) {
+            log.error("Failed to store uploaded file '{}'", uniqueFileName, e);
             throw new ApiException(HttpStatus.INTERNAL_SERVER_ERROR, "STORAGE_ERROR", "Failed to store file.");
         }
     }
 
+    /**
+     * Resolves a stored file's URL to an actual file on disk.
+     * Returns null if the URL is malformed OR if the file doesn't actually exist -
+     * previously this only checked the URL shape, so callers got back a non-null File
+     * object pointing at nothing, and had to remember to call .exists() themselves.
+     */
     public java.io.File getFile(String fileUrl) {
-        if (fileUrl != null && fileUrl.startsWith("/uploads/")) {
-            String filename = fileUrl.substring("/uploads/".length());
-            return storageDirectory.resolve(filename).toFile();
+        if (fileUrl == null || !fileUrl.startsWith("/uploads/")) {
+            return null;
         }
-        return null;
+        String filename = fileUrl.substring("/uploads/".length());
+        java.io.File file = storageDirectory.resolve(filename).toFile();
+        if (!file.exists() || !file.isFile()) {
+            log.warn("Requested file does not exist on disk: {}", file.getAbsolutePath());
+            return null;
+        }
+        return file;
     }
 }
