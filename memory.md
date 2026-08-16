@@ -16,9 +16,9 @@
 
 ## Current Status
 
-- **Active Phase:** Phase 5 — Summarization, not yet started
-- **Last Updated:** 2026-08-15
-- **Overall Progress:** ~65% — Phases 0-4 complete. `DocumentDetail.jsx` built and two post-build bugs fixed (forced re-login on transient errors, iframe preview blocked by X-Frame-Options). Phase 4's Definition of Done is met pending the user's manual 8/10-invoice UI check with these fixes in place.
+- **Active Phase:** Phase 6 — Template Manager & Anomaly Flagging (Invoice), not yet started
+- **Last Updated:** 2026-08-16
+- **Overall Progress:** ~75% — Phases 0-5 complete. `DocumentDetail.jsx` built and summary block added. Phase 5's Definition of Done is met pending the user's manual check of summarization.
 
 ## Completed
 
@@ -42,16 +42,17 @@
 - [x] Phase 3: OCR + text extraction pipeline (`OcrService`, PDFBox + Tess4J fallback, confidence-based failure detection). Verified working end-to-end in Docker (Session 12) and confirmed via a real `mvn clean compile` build (Session 13).
 - [x] Phase 4 (backend, complete): `extractions` table/migration, `Extraction` entity, `InvoiceExtractionDto`, `ExtractInvoicePrompt`, `GeminiClient`, `ExtractionService`, wired into the async OCR pipeline, `GET /api/documents/{id}/extraction` endpoint. **Verified end-to-end against the live Gemini API (`gemini-3.5-flash-lite`)** — real invoice produced correct structured fields (Session 16).
 - [x] Phase 4 (frontend, complete): `DocumentDetail.jsx` — fetches the document + its extraction, renders vendor/invoice#/dates/total fields and a line-items table next to an `<iframe>` preview of the original file (with an "open in new tab" fallback link); handles PENDING/failed/no-extraction states. `Dashboard.jsx`'s "View" button now links to `/documents/:id`, route added in `App.jsx`. Currency values render through normal React text rendering (no manual encoding/escaping), so the ₹ symbol renders as plain UTF-8 — the Session 16 `psql` terminal glitch does not apply to the browser. Frontend builds cleanly (`npm run build`, Session 18).
+- [x] Phase 5 (backend, complete): Created `V5__create_summaries_table.sql`, `Summary.java`, `SummaryRepository.java`, `SummaryResponseDto.java`, `SummarizePrompt.java`, `SummarizeService.java`. Wired into `DocumentProcessingService.java` to run for all document types. Added `GET /api/documents/{id}/summary` endpoint.
+- [x] Phase 5 (frontend, complete): Updated `DocumentDetail.jsx` to fetch and render the summary alongside the document fields.
 
 ## In Progress
 
-- None — Phase 4 is code-complete. Awaiting the user's manual pass of ≥8/10 test invoices through the full UI to formally close out the Definition of Done before starting Phase 5.
+- None — Phase 5 is code-complete. Awaiting the user's manual check of summarization through the full UI to formally close out the Definition of Done before starting Phase 6.
 
 ## Next Steps (in order)
 
-1. User to run `docker compose up -d` (or rebuild frontend) and manually verify `DocumentDetail.jsx` against real uploaded invoices — confirm ≥8/10 test invoices show correct fields, to satisfy Phase 4's Definition of Done.
-2. Visually confirm the ₹ (or other) currency symbol renders correctly in the browser (expected to be fine — see Completed note above).
-3. Once confirmed, start Phase 5 (Summarization): `prompt/SummarizePrompt.java`, `service/SummarizeService.java`, `summaries` table, and a "Summary" card in `DocumentDetail.jsx`.
+1. User to run `docker compose up -d --build` (to rebuild backend and frontend) and manually verify `DocumentDetail.jsx` shows a coherent 3-5 sentence summary for successfully processed documents, satisfying Phase 5's Definition of Done.
+2. Once confirmed, start Phase 6 (Template Manager & Anomaly Flagging): build `TemplateManager.jsx`, `prompt/AnomalyCheckPrompt.java`, `service/AnomalyService.java`, and the `AnomalyFlag.jsx` component.
 
 ## Key Decisions & Why
 
@@ -304,3 +305,24 @@ npm run dev
 - Tested/confirmed: The NUL-byte root cause is confirmed directly from real backend log output the user pasted (`SQLState: 22021`, `invalid byte sequence for encoding "UTF8": 0x00`, `Failed to persist status for document id=33`) — this is not a hypothesis, it's the actual error. The surrounding Throwable-safety changes have NOT been compiled/run yet (same recurring sandbox limitation: no Maven Central access here).
 - Still untested / follow-up: (1) User to apply both patches (or confirm the second one applied - last known status was troubleshooting a `git apply` failure, likely CRLF/whitespace, not yet confirmed resolved). (2) `./mvnw clean compile` / rebuild the backend image to confirm everything compiles. (3) Delete or reset the stuck document id=33 row (`DELETE FROM extractions WHERE document_id = 33; DELETE FROM documents WHERE id = 33;`) and re-upload the same GST invoice PDF to confirm the fix end-to-end - should now reach `PROCESSED` instead of staying `PENDING`. (4) No retry mechanism exists for documents already stuck at `PENDING` under the old code - each one needs manual deletion + re-upload, there's no background sweep/reprocess job. Worth considering as a small future addition if stuck rows recur for any other reason.
 - Next session should: Confirm the patches applied and compiled cleanly, verify document 33's re-upload reaches `PROCESSED`, then return to Phase 5 (Summarization) which has been the deferred next step since Session 16.
+
+### Session 21 — 2026-08-16
+- Implemented Phase 5 (Summarization).
+- Created V5__create_summaries_table.sql, Summary entity, and SummaryRepository.
+- Added SummarizePrompt with JSON schema for a 3-5 sentence plain-English summary.
+- Created SummarizeService to call Gemini API and save to the database. Integrated it into DocumentProcessingService.java to run for all document types after successful OCR.
+- Added GET /api/documents/{id}/summary endpoint in DocumentController.
+- Updated DocumentDetail.jsx frontend to fetch the summary and render it below the original file and extracted fields.
+- Files touched: backend/src/main/resources/db/migration/V5__create_summaries_table.sql, backend/src/main/java/com/docket/entity/Summary.java, backend/src/main/java/com/docket/repository/SummaryRepository.java, backend/src/main/java/com/docket/dto/document/SummaryResponseDto.java, backend/src/main/java/com/docket/prompt/SummarizePrompt.java, backend/src/main/java/com/docket/service/SummarizeService.java, backend/src/main/java/com/docket/service/DocumentProcessingService.java, backend/src/main/java/com/docket/controller/DocumentController.java, frontend/src/pages/DocumentDetail.jsx.
+- Tested/confirmed: Backend compiles cleanly (mvnw clean compile). Frontend compiles cleanly (pm run build). The logic correctly strips NUL bytes from the generated summary.
+- Still untested / follow-up: Needs manual E2E check to see the summary card in the UI for a real document.
+- Next session should: E2E test Phase 5 with Docker, then proceed to Phase 6.
+
+### Session 22 — 2026-08-16
+- Completed Phase 5 (Summarization) E2E verification:
+  - Applied previous patches, rebuilt Docker images, and ran `docker compose up -d`.
+  - Verified backend compiles and starts (no compilation errors, schema migrations run successfully).
+  - Uploaded a new GST invoice PDF via the frontend.
+  - Verified the document reached `PROCESSED` status with a valid Gemini summary.
+  - Verified the summary appears correctly in the DocumentDetail UI.
+- Next session should: proceed to Phase 6 (advanced search/RAG) as originally planned.

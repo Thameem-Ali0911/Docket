@@ -24,13 +24,16 @@ public class DocumentProcessingService {
     private final StorageService storageService;
     private final DocumentRepository documentRepository;
     private final ExtractionService extractionService;
+    private final SummarizeService summarizeService;
 
     public DocumentProcessingService(OcrService ocrService, StorageService storageService,
-                                      DocumentRepository documentRepository, ExtractionService extractionService) {
+                                      DocumentRepository documentRepository, ExtractionService extractionService,
+                                      SummarizeService summarizeService) {
         this.ocrService = ocrService;
         this.storageService = storageService;
         this.documentRepository = documentRepository;
         this.extractionService = extractionService;
+        this.summarizeService = summarizeService;
     }
 
     @Async
@@ -97,6 +100,15 @@ public class DocumentProcessingService {
                 extractionService.extractInvoiceFields(doc);
             } catch (Throwable t) {
                 log.error("Field extraction failed for document id={}", doc.getId(), t);
+            }
+        }
+
+        // Phase 5: run summarization for all successfully-OCR'd documents.
+        if (doc.getStatus() == DocumentStatus.PROCESSED) {
+            try {
+                summarizeService.summarizeDocument(doc);
+            } catch (Throwable t) {
+                log.error("Summarization failed for document id={}", doc.getId(), t);
             }
         }
     }

@@ -16,6 +16,8 @@ export default function DocumentDetail() {
     const [document, setDocument] = useState(null);
     const [fields, setFields] = useState(null);
     const [extractionFailedReason, setExtractionFailedReason] = useState(null);
+    const [summary, setSummary] = useState(null);
+    const [summaryFailedReason, setSummaryFailedReason] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
 
@@ -26,8 +28,9 @@ export default function DocumentDetail() {
         Promise.all([
             apiFetch('/api/documents'),
             apiFetch(`/api/documents/${id}/extraction`),
+            apiFetch(`/api/documents/${id}/summary`),
         ])
-            .then(([documents, extraction]) => {
+            .then(([documents, extraction, summaryResp]) => {
                 const doc = documents.find(d => String(d.id) === String(id));
                 if (!doc) {
                     setError('Document not found.');
@@ -44,6 +47,11 @@ export default function DocumentDetail() {
                             setError('Extracted data could not be read.');
                         }
                     }
+                }
+
+                if (summaryResp) {
+                    setSummaryFailedReason(summaryResp.failedReason || null);
+                    setSummary(summaryResp.summaryText || null);
                 }
             })
             .catch((err) => {
@@ -191,6 +199,33 @@ export default function DocumentDetail() {
                                                 </table>
                                             </div>
                                         )}
+                                    </div>
+                                )}
+                            </div>
+                            
+                            {/* Summary */}
+                            <div className="card overflow-hidden" style={{ gridColumn: '1 / -1' }}>
+                                <div className="px-4 py-3" style={{ borderBottom: '1px solid var(--color-border)' }}>
+                                    <h3>Summary</h3>
+                                </div>
+                                {document?.status === 'PENDING' ? (
+                                    <div className="p-6" style={{ color: 'var(--color-text-secondary)' }}>
+                                        Still processing this document — summarization hasn't run yet.
+                                    </div>
+                                ) : summaryFailedReason ? (
+                                    <div className="p-6">
+                                        <span className="badge badge-danger">Summarization failed</span>
+                                        <p style={{ color: 'var(--color-text-secondary)', marginTop: '10px', fontSize: '14px' }}>
+                                            {summaryFailedReason}
+                                        </p>
+                                    </div>
+                                ) : !summary ? (
+                                    <div className="p-6" style={{ color: 'var(--color-text-secondary)' }}>
+                                        No summary available for this document yet.
+                                    </div>
+                                ) : (
+                                    <div className="p-6 text-sm" style={{ lineHeight: '1.6', color: 'var(--color-text-primary)' }}>
+                                        {summary}
                                     </div>
                                 )}
                             </div>
