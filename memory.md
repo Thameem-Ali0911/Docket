@@ -342,3 +342,14 @@ npm run dev
 - Tested/confirmed: Backend compiles cleanly (mvnw clean compile). Frontend compiles cleanly (
 pm run build).
 - Next session should: Perform E2E manual test of Phase 6 by uploading a baseline invoice, setting it as a template, uploading a modified invoice, and checking for anomaly flags.
+
+### Session 24 — 2026-08-16
+- User confirmed Phase 6 E2E works perfectly (uploaded baseline invoice, set as template, uploaded second invoice, anomaly detected and rendered).
+- Phase 6 is 100% complete.
+- Next session should: Begin Phase 7 (Extend to Contract and Resume Types).
+
+### Session 25 — 2026-08-16
+- Drafted Phase 7 implementation plan covering: ContractExtractionDto, ResumeExtractionDto, ExtractContractPrompt, ExtractResumePrompt, ExtractionService dispatch update, UploadDocument.jsx dropdown enable, DocumentDetail.jsx multi-type rendering, TemplateManager.jsx type switcher.
+- Files touched: memory.md (status sections corrected), implementation_plan.md (Phase 7 plan created).
+- Tested/confirmed: nothing built this session - plan only.
+- Next session should: Execute Phase 7 plan - create DTOs, prompts, update service and UI, then rebuild and verify.
