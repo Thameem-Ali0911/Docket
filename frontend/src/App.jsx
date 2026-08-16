@@ -38,6 +38,14 @@ function App() {
                         </ProtectedRoute>
                     }
                 />
+                <Route
+                    path="/templates"
+                    element={
+                        <ProtectedRoute>
+                            <TemplateManager />
+                        </ProtectedRoute>
+                    }
+                />
             </Routes>
         </BrowserRouter>
     );
