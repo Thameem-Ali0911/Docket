@@ -58,15 +58,29 @@ export async function apiFetch(path, options = {}) {
         headers,
     });
 
+    if (response.status === 401 || response.status === 403) {
+        clearToken();
+        window.location.href = '/login';
+        throw new Error(`Authentication failed (${response.status}). Please log in again.`);
+    }
+
     // Handle no-content responses
     if (response.status === 204) {
         return null;
     }
 
-    const data = await response.json();
+    let data = null;
+    const text = await response.text();
+    if (text) {
+        try {
+            data = JSON.parse(text);
+        } catch (err) {
+            data = { error: { message: "Invalid JSON response from server" } };
+        }
+    }
 
     if (!response.ok) {
-        const errorMessage = data?.error?.message || `Request failed with status ${response.status}`;
+        const errorMessage = data?.error?.message || data?.message || `Request failed with status ${response.status}`;
         const error = new Error(errorMessage);
         error.status = response.status;
         throw error;

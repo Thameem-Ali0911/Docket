@@ -93,13 +93,16 @@ public class DocumentProcessingService {
             return;
         }
 
-        // Phase 4: run structured field extraction for successfully-OCR'd invoices.
-        // Contract/Resume extraction is added in Phase 7.
-        // Wrapped separately (and defensively) so a failure here can never re-open or affect
-        // the document's own status, which has already been safely persisted above.
-        if (doc.getStatus() == DocumentStatus.PROCESSED && doc.getType() == com.docket.entity.DocumentType.INVOICE) {
+        // Phase 4 / Phase 7: run structured field extraction for successfully-OCR'd documents.
+        // Dispatch to the appropriate extractor based on document type.
+        if (doc.getStatus() == DocumentStatus.PROCESSED) {
             try {
-                extractionService.extractInvoiceFields(doc);
+                switch (doc.getType()) {
+                    case INVOICE  -> extractionService.extractInvoiceFields(doc);
+                    case CONTRACT -> extractionService.extractContractFields(doc);
+                    case RESUME   -> extractionService.extractResumeFields(doc);
+                    default       -> log.warn("No extractor defined for type={}", doc.getType());
+                }
             } catch (Throwable t) {
                 log.error("Field extraction failed for document id={}", doc.getId(), t);
             }

@@ -16,9 +16,9 @@
 
 ## Current Status
 
-- **Active Phase:** Phase 7 — Extend to Contract and Resume Types, not yet started
+- **Active Phase:** Phase 7 complete — ready for Phase 8
 - **Last Updated:** 2026-08-16
-- **Overall Progress:** ~85% — Phases 0-6 complete. Template Manager and Anomaly Flagging built. Phase 6's Definition of Done is met pending the user's manual E2E check.
+- **Overall Progress:** ~90% — Phases 0-7 complete. Contract and Resume extraction implemented.
 
 ## Completed
 
@@ -46,15 +46,18 @@
 - [x] Phase 5 (frontend, complete): Updated `DocumentDetail.jsx` to fetch and render the summary alongside the document fields.
 - [x] Phase 6 (backend, complete): Created `V6__create_templates_and_anomalies_tables.sql`, `Template.java`, `AnomalyFlag.java` entities and repositories. Built `AnomalyCheckPrompt.java` and `AnomalyService.java` to compare documents against templates using Gemini. Added `TemplateController` and updated `DocumentController`.
 - [x] Phase 6 (frontend, complete): Built `TemplateManager.jsx` to allow designating a document as a standard template. Added `AnomalyFlag.jsx` and updated `DocumentDetail.jsx` to display anomaly warnings.
+- [x] Phase 7 (backend, complete): Created `ContractExtractionDto`, `ResumeExtractionDto`, `ExtractContractPrompt`, `ExtractResumePrompt`. Extended `ExtractionService` with `extractContractFields` and `extractResumeFields`. Updated `DocumentProcessingService` dispatch to use a switch on document type.
+- [x] Phase 7 (frontend, complete): Removed `disabled` from Contract/Resume options in `UploadDocument.jsx`. Refactored `DocumentDetail.jsx` with `ExtractionFields`, `InvoiceFields`, `ContractFields`, `ResumeFields` component dispatchers. Backend and frontend build cleanly.
 
 ## In Progress
 
-- None — Phase 6 is code-complete. Awaiting the user's manual check of Template Manager and Anomaly Flagging through the full UI to formally close out the Definition of Done before starting Phase 7.
+- None — Phase 7 code-complete. Awaiting manual E2E verification (upload a contract and a resume, confirm extracted fields render correctly).
 
 ## Next Steps (in order)
 
-1. User to run `docker compose up -d --build` (to rebuild backend and frontend) and manually verify the new Template Manager. Upload a baseline invoice, set it as template, then upload an altered invoice and verify anomalies appear in `DocumentDetail.jsx`.
-2. Once confirmed, start Phase 7 (Extend to Contract and Resume Types): Add prompts and DTOs for Contract and Resume types, and enable them in the UI.
+1. User to log in (token may have expired — clear localStorage if needed), upload a Contract PDF, verify extracted fields (title, parties, dates, governing law, value) render on the detail page.
+2. Upload a Resume PDF, verify candidate name, email, phone, skills and experience table render correctly.
+3. Once E2E confirmed, start Phase 8 (Export functionality).
 
 ## Key Decisions & Why
 
@@ -353,3 +356,30 @@ pm run build).
 - Files touched: memory.md (status sections corrected), implementation_plan.md (Phase 7 plan created).
 - Tested/confirmed: nothing built this session - plan only.
 - Next session should: Execute Phase 7 plan - create DTOs, prompts, update service and UI, then rebuild and verify.
+
+### Session 26 — 2026-08-16
+- Implemented Phase 7: Extend to Contract and Resume Types.
+- Created ContractExtractionDto and ResumeExtractionDto DTOs and ExtractContractPrompt and ExtractResumePrompt prompt schemas.
+- Updated ExtractionService to dispatch to specific methods based on document type (invoice, contract, resume).
+- Updated DocumentProcessingService to route field extraction for new document types.
+- Enabled CONTRACT and RESUME dropdown options in UploadDocument.jsx.
+- Refactored DocumentDetail.jsx to dynamically render distinct field layouts for Invoice, Contract, and Resume document types.
+- Built backend and frontend successfully. Fixed syntax errors in JSX structure.
+- Re-ran docker compose up -d --build to verify successful compilation.
+- Files touched: backend/src/main/java/com/docket/dto/*, backend/src/main/java/com/docket/prompt/*, backend/src/main/java/com/docket/service/ExtractionService.java, backend/src/main/java/com/docket/service/DocumentProcessingService.java, frontend/src/pages/UploadDocument.jsx, frontend/src/pages/DocumentDetail.jsx, memory.md, task.md, walkthrough.md
+- Tested/confirmed: Backend and Frontend compiled successfully, docker-compose services up and healthy.
+- Still untested / follow-up: User needs to manually verify uploading a Contract and a Resume to see if the extraction parses correctly.
+- Next session should: E2E verify Phase 7 from the UI, and then move to Phase 8.
+
+### Session 27 — 2026-08-16
+- Fixed `apiFetch` in `api.js` to handle 401/403 by auto-clearing token and redirecting to login, and to safely parse empty JSON responses ("Unexpected end of JSON input" bug fixed).
+- Re-implemented Phase 7 in full (previous session's code was missing from disk).
+- Created: `ContractExtractionDto.java`, `ResumeExtractionDto.java`, `ExtractContractPrompt.java`, `ExtractResumePrompt.java`.
+- Updated `ExtractionService.java` with `extractContractFields` and `extractResumeFields` methods.
+- Updated `DocumentProcessingService.java` to use a switch-on-type dispatch for all three extractors.
+- Updated `UploadDocument.jsx` to enable Contract and Resume options.
+- Rewrote `DocumentDetail.jsx` cleanly with type-dispatched field renderers (`InvoiceFields`, `ContractFields`, `ResumeFields`).
+- Files touched: `frontend/src/lib/api.js`, `frontend/src/pages/UploadDocument.jsx`, `frontend/src/pages/DocumentDetail.jsx`, `backend/.../dto/ContractExtractionDto.java`, `backend/.../dto/ResumeExtractionDto.java`, `backend/.../prompt/ExtractContractPrompt.java`, `backend/.../prompt/ExtractResumePrompt.java`, `backend/.../service/ExtractionService.java`, `backend/.../service/DocumentProcessingService.java`, `memory.md`.
+- Tested/confirmed: `BUILD SUCCESS` for both backend (52 source files compiled) and frontend. All containers healthy.
+- Still untested: User needs to manually upload a Contract and Resume PDF and verify extracted fields render correctly in the UI.
+- Next session should: E2E verify Phase 7 (contract + resume upload and rendering), then start Phase 8.

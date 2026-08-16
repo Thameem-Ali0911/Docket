@@ -81,8 +81,8 @@ export default function UploadDocument() {
                                 onChange={(e) => setType(e.target.value)}
                             >
                                 <option value="INVOICE">Invoice</option>
-                                <option value="CONTRACT" disabled>Contract (Coming Soon)</option>
-                                <option value="RESUME" disabled>Resume (Coming Soon)</option>
+                                <option value="CONTRACT">Contract</option>
+                                <option value="RESUME">Resume</option>
                             </select>
                         </div>
 

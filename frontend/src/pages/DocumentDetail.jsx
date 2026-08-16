@@ -6,9 +6,8 @@ import AnomalyFlag from '../components/AnomalyFlag';
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
 
 /**
- * Document detail page — shows the Gemini-extracted invoice fields
- * (vendor, invoice #, dates, total, line items) next to a preview
- * of the original uploaded file.
+ * Document detail page — shows the Gemini-extracted fields for invoices,
+ * contracts, and resumes, next to a preview of the original uploaded file.
  */
 export default function DocumentDetail() {
     const { id } = useParams();
@@ -67,8 +66,6 @@ export default function DocumentDetail() {
                     navigate('/login', { replace: true });
                     return;
                 }
-                // Any other failure (transient 500, backend momentarily busy, network
-                // blip) shouldn't wipe a valid login — surface it instead.
                 setError(err.message || 'Failed to load document.');
             })
             .finally(() => setLoading(false));
@@ -174,50 +171,11 @@ export default function DocumentDetail() {
                                                 ))}
                                             </div>
                                         )}
-                                        
-                                        <dl className="grid gap-3 mb-6" style={{ gridTemplateColumns: '1fr 1fr' }}>
-                                            <Field label="Vendor" value={fields.vendorName} />
-                                            <Field label="Invoice #" value={fields.invoiceNumber} />
-                                            <Field label="Invoice date" value={fields.invoiceDate} />
-                                            <Field label="Due date" value={fields.dueDate} />
-                                            <Field label="Total" value={fields.totalAmount} bold />
-                                        </dl>
-
-                                        {Array.isArray(fields.lineItems) && fields.lineItems.length > 0 && (
-                                            <div>
-                                                <h4 className="mb-2" style={{
-                                                    fontSize: '13px', fontWeight: 600,
-                                                    color: 'var(--color-text-secondary)',
-                                                    textTransform: 'uppercase', letterSpacing: '0.04em',
-                                                }}>
-                                                    Line items
-                                                </h4>
-                                                <table className="w-full text-left border-collapse text-sm">
-                                                    <thead>
-                                                        <tr style={{ borderBottom: '1px solid var(--color-border)' }}>
-                                                            <th className="py-2 pr-2 font-semibold" style={{ color: 'var(--color-text-secondary)' }}>Description</th>
-                                                            <th className="py-2 pr-2 font-semibold" style={{ color: 'var(--color-text-secondary)' }}>Qty</th>
-                                                            <th className="py-2 pr-2 font-semibold" style={{ color: 'var(--color-text-secondary)' }}>Unit price</th>
-                                                            <th className="py-2 font-semibold text-right" style={{ color: 'var(--color-text-secondary)' }}>Amount</th>
-                                                        </tr>
-                                                    </thead>
-                                                    <tbody>
-                                                        {fields.lineItems.map((item, idx) => (
-                                                            <tr key={idx} style={{ borderBottom: '1px solid var(--color-border)' }}>
-                                                                <td className="py-2 pr-2">{item.description}</td>
-                                                                <td className="py-2 pr-2">{item.quantity || '—'}</td>
-                                                                <td className="py-2 pr-2">{item.unitPrice || '—'}</td>
-                                                                <td className="py-2 text-right">{item.amount || '—'}</td>
-                                                            </tr>
-                                                        ))}
-                                                    </tbody>
-                                                </table>
-                                            </div>
-                                        )}
+                                        <ExtractionFields type={document?.type} fields={fields} />
                                     </div>
                                 )}
                             </div>
-                            
+
                             {/* Summary */}
                             <div className="card overflow-hidden" style={{ gridColumn: '1 / -1' }}>
                                 <div className="px-4 py-3" style={{ borderBottom: '1px solid var(--color-border)' }}>
@@ -249,6 +207,143 @@ export default function DocumentDetail() {
                 )}
             </main>
         </div>
+    );
+}
+
+/** Dispatches to the correct field renderer based on document type. */
+function ExtractionFields({ type, fields }) {
+    if (type === 'INVOICE') return <InvoiceFields fields={fields} />;
+    if (type === 'CONTRACT') return <ContractFields fields={fields} />;
+    if (type === 'RESUME') return <ResumeFields fields={fields} />;
+    return <pre className="text-xs" style={{ overflowX: 'auto' }}>{JSON.stringify(fields, null, 2)}</pre>;
+}
+
+function InvoiceFields({ fields }) {
+    return (
+        <>
+            <dl className="grid gap-3 mb-6" style={{ gridTemplateColumns: '1fr 1fr' }}>
+                <Field label="Vendor" value={fields.vendorName} />
+                <Field label="Invoice #" value={fields.invoiceNumber} />
+                <Field label="Invoice date" value={fields.invoiceDate} />
+                <Field label="Due date" value={fields.dueDate} />
+                <Field label="Total" value={fields.totalAmount} bold />
+            </dl>
+
+            {Array.isArray(fields.lineItems) && fields.lineItems.length > 0 && (
+                <div>
+                    <SectionHeader>Line items</SectionHeader>
+                    <table className="w-full text-left border-collapse text-sm">
+                        <thead>
+                            <tr style={{ borderBottom: '1px solid var(--color-border)' }}>
+                                <th className="py-2 pr-2 font-semibold" style={{ color: 'var(--color-text-secondary)' }}>Description</th>
+                                <th className="py-2 pr-2 font-semibold" style={{ color: 'var(--color-text-secondary)' }}>Qty</th>
+                                <th className="py-2 pr-2 font-semibold" style={{ color: 'var(--color-text-secondary)' }}>Unit price</th>
+                                <th className="py-2 font-semibold text-right" style={{ color: 'var(--color-text-secondary)' }}>Amount</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {fields.lineItems.map((item, idx) => (
+                                <tr key={idx} style={{ borderBottom: '1px solid var(--color-border)' }}>
+                                    <td className="py-2 pr-2">{item.description}</td>
+                                    <td className="py-2 pr-2">{item.quantity || '—'}</td>
+                                    <td className="py-2 pr-2">{item.unitPrice || '—'}</td>
+                                    <td className="py-2 text-right">{item.amount || '—'}</td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+            )}
+        </>
+    );
+}
+
+function ContractFields({ fields }) {
+    return (
+        <>
+            <dl className="grid gap-3 mb-6" style={{ gridTemplateColumns: '1fr 1fr' }}>
+                <div style={{ gridColumn: '1 / -1' }}>
+                    <Field label="Contract Title" value={fields.contractTitle} bold />
+                </div>
+                <Field label="Effective Date" value={fields.effectiveDate} />
+                <Field label="Term / Duration" value={fields.termOrDuration} />
+                <Field label="Governing Law" value={fields.governingLaw} />
+                <Field label="Total Value" value={fields.totalValue} />
+            </dl>
+
+            {Array.isArray(fields.parties) && fields.parties.length > 0 && (
+                <div className="mb-4">
+                    <SectionHeader>Parties</SectionHeader>
+                    <ul className="text-sm" style={{ listStyle: 'disc', paddingLeft: '18px', lineHeight: '1.8' }}>
+                        {fields.parties.map((p, i) => <li key={i}>{p}</li>)}
+                    </ul>
+                </div>
+            )}
+        </>
+    );
+}
+
+function ResumeFields({ fields }) {
+    return (
+        <>
+            <dl className="grid gap-3 mb-6" style={{ gridTemplateColumns: '1fr 1fr' }}>
+                <div style={{ gridColumn: '1 / -1' }}>
+                    <Field label="Candidate Name" value={fields.candidateName} bold />
+                </div>
+                <Field label="Email" value={fields.email} />
+                <Field label="Phone" value={fields.phone} />
+                <div style={{ gridColumn: '1 / -1' }}>
+                    <Field label="Education" value={fields.education} />
+                </div>
+            </dl>
+
+            {Array.isArray(fields.skills) && fields.skills.length > 0 && (
+                <div className="mb-4">
+                    <SectionHeader>Skills</SectionHeader>
+                    <div className="flex flex-wrap gap-2 mt-2">
+                        {fields.skills.map((s, i) => (
+                            <span key={i} className="badge badge-warning" style={{ fontSize: '12px' }}>{s}</span>
+                        ))}
+                    </div>
+                </div>
+            )}
+
+            {Array.isArray(fields.experience) && fields.experience.length > 0 && (
+                <div>
+                    <SectionHeader>Experience</SectionHeader>
+                    <table className="w-full text-left border-collapse text-sm mt-2">
+                        <thead>
+                            <tr style={{ borderBottom: '1px solid var(--color-border)' }}>
+                                <th className="py-2 pr-2 font-semibold" style={{ color: 'var(--color-text-secondary)' }}>Company</th>
+                                <th className="py-2 pr-2 font-semibold" style={{ color: 'var(--color-text-secondary)' }}>Role</th>
+                                <th className="py-2 font-semibold" style={{ color: 'var(--color-text-secondary)' }}>Duration</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {fields.experience.map((exp, idx) => (
+                                <tr key={idx} style={{ borderBottom: '1px solid var(--color-border)' }}>
+                                    <td className="py-2 pr-2">{exp.company || '—'}</td>
+                                    <td className="py-2 pr-2">{exp.role || '—'}</td>
+                                    <td className="py-2">{exp.duration || '—'}</td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+            )}
+        </>
+    );
+}
+
+function SectionHeader({ children }) {
+    return (
+        <h4 className="mb-2" style={{
+            fontSize: '13px', fontWeight: 600,
+            color: 'var(--color-text-secondary)',
+            textTransform: 'uppercase', letterSpacing: '0.04em',
+        }}>
+            {children}
+        </h4>
     );
 }
 
