@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { apiFetch, clearToken } from '../lib/api';
+import AnomalyFlag from '../components/AnomalyFlag';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
 
@@ -18,6 +19,7 @@ export default function DocumentDetail() {
     const [extractionFailedReason, setExtractionFailedReason] = useState(null);
     const [summary, setSummary] = useState(null);
     const [summaryFailedReason, setSummaryFailedReason] = useState(null);
+    const [anomalies, setAnomalies] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
 
@@ -29,8 +31,9 @@ export default function DocumentDetail() {
             apiFetch('/api/documents'),
             apiFetch(`/api/documents/${id}/extraction`),
             apiFetch(`/api/documents/${id}/summary`),
+            apiFetch(`/api/documents/${id}/anomalies`),
         ])
-            .then(([documents, extraction, summaryResp]) => {
+            .then(([documents, extraction, summaryResp, anomaliesResp]) => {
                 const doc = documents.find(d => String(d.id) === String(id));
                 if (!doc) {
                     setError('Document not found.');
@@ -52,6 +55,10 @@ export default function DocumentDetail() {
                 if (summaryResp) {
                     setSummaryFailedReason(summaryResp.failedReason || null);
                     setSummary(summaryResp.summaryText || null);
+                }
+
+                if (anomaliesResp) {
+                    setAnomalies(anomaliesResp);
                 }
             })
             .catch((err) => {
@@ -160,6 +167,14 @@ export default function DocumentDetail() {
                                     </div>
                                 ) : (
                                     <div className="p-4">
+                                        {anomalies && anomalies.length > 0 && (
+                                            <div className="mb-6">
+                                                {anomalies.map(flag => (
+                                                    <AnomalyFlag key={flag.id} flag={flag} />
+                                                ))}
+                                            </div>
+                                        )}
+                                        
                                         <dl className="grid gap-3 mb-6" style={{ gridTemplateColumns: '1fr 1fr' }}>
                                             <Field label="Vendor" value={fields.vendorName} />
                                             <Field label="Invoice #" value={fields.invoiceNumber} />

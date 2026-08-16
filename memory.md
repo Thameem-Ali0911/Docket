@@ -16,9 +16,9 @@
 
 ## Current Status
 
-- **Active Phase:** Phase 6 — Template Manager & Anomaly Flagging (Invoice), not yet started
+- **Active Phase:** Phase 7 — Extend to Contract and Resume Types, not yet started
 - **Last Updated:** 2026-08-16
-- **Overall Progress:** ~75% — Phases 0-5 complete. `DocumentDetail.jsx` built and summary block added. Phase 5's Definition of Done is met pending the user's manual check of summarization.
+- **Overall Progress:** ~85% — Phases 0-6 complete. Template Manager and Anomaly Flagging built. Phase 6's Definition of Done is met pending the user's manual E2E check.
 
 ## Completed
 
@@ -44,15 +44,17 @@
 - [x] Phase 4 (frontend, complete): `DocumentDetail.jsx` — fetches the document + its extraction, renders vendor/invoice#/dates/total fields and a line-items table next to an `<iframe>` preview of the original file (with an "open in new tab" fallback link); handles PENDING/failed/no-extraction states. `Dashboard.jsx`'s "View" button now links to `/documents/:id`, route added in `App.jsx`. Currency values render through normal React text rendering (no manual encoding/escaping), so the ₹ symbol renders as plain UTF-8 — the Session 16 `psql` terminal glitch does not apply to the browser. Frontend builds cleanly (`npm run build`, Session 18).
 - [x] Phase 5 (backend, complete): Created `V5__create_summaries_table.sql`, `Summary.java`, `SummaryRepository.java`, `SummaryResponseDto.java`, `SummarizePrompt.java`, `SummarizeService.java`. Wired into `DocumentProcessingService.java` to run for all document types. Added `GET /api/documents/{id}/summary` endpoint.
 - [x] Phase 5 (frontend, complete): Updated `DocumentDetail.jsx` to fetch and render the summary alongside the document fields.
+- [x] Phase 6 (backend, complete): Created `V6__create_templates_and_anomalies_tables.sql`, `Template.java`, `AnomalyFlag.java` entities and repositories. Built `AnomalyCheckPrompt.java` and `AnomalyService.java` to compare documents against templates using Gemini. Added `TemplateController` and updated `DocumentController`.
+- [x] Phase 6 (frontend, complete): Built `TemplateManager.jsx` to allow designating a document as a standard template. Added `AnomalyFlag.jsx` and updated `DocumentDetail.jsx` to display anomaly warnings.
 
 ## In Progress
 
-- None — Phase 5 is code-complete. Awaiting the user's manual check of summarization through the full UI to formally close out the Definition of Done before starting Phase 6.
+- None — Phase 6 is code-complete. Awaiting the user's manual check of Template Manager and Anomaly Flagging through the full UI to formally close out the Definition of Done before starting Phase 7.
 
 ## Next Steps (in order)
 
-1. User to run `docker compose up -d --build` (to rebuild backend and frontend) and manually verify `DocumentDetail.jsx` shows a coherent 3-5 sentence summary for successfully processed documents, satisfying Phase 5's Definition of Done.
-2. Once confirmed, start Phase 6 (Template Manager & Anomaly Flagging): build `TemplateManager.jsx`, `prompt/AnomalyCheckPrompt.java`, `service/AnomalyService.java`, and the `AnomalyFlag.jsx` component.
+1. User to run `docker compose up -d --build` (to rebuild backend and frontend) and manually verify the new Template Manager. Upload a baseline invoice, set it as template, then upload an altered invoice and verify anomalies appear in `DocumentDetail.jsx`.
+2. Once confirmed, start Phase 7 (Extend to Contract and Resume Types): Add prompts and DTOs for Contract and Resume types, and enable them in the UI.
 
 ## Key Decisions & Why
 
@@ -326,3 +328,17 @@ npm run dev
   - Verified the document reached `PROCESSED` status with a valid Gemini summary.
   - Verified the summary appears correctly in the DocumentDetail UI.
 - Next session should: proceed to Phase 6 (advanced search/RAG) as originally planned.
+
+### Session 23 — 2026-08-16
+- Implemented Phase 6 (Template Manager & Anomaly Flagging).
+- Created V6__create_templates_and_anomalies_tables.sql migration for 	emplates and anomaly_flags tables.
+- Built Template and AnomalyFlag entities and their repositories.
+- Added AnomalyCheckPrompt to instruct Gemini to compare a new document against a template and return flagged anomalies as JSON.
+- Created AnomalyService.java to perform the anomaly check for PROCESSED documents, and integrated it into DocumentProcessingService.java.
+- Added TemplateController with POST /api/templates and GET /api/templates/{type}.
+- Added GET /api/documents/{id}/anomalies to DocumentController.
+- Frontend: Created TemplateManager.jsx to select the invoice template. Added a link to it from Dashboard.jsx.
+- Frontend: Created AnomalyFlag.jsx component and updated DocumentDetail.jsx to fetch and render the anomalies.
+- Tested/confirmed: Backend compiles cleanly (mvnw clean compile). Frontend compiles cleanly (
+pm run build).
+- Next session should: Perform E2E manual test of Phase 6 by uploading a baseline invoice, setting it as a template, uploading a modified invoice, and checking for anomaly flags.

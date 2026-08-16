@@ -25,15 +25,17 @@ public class DocumentProcessingService {
     private final DocumentRepository documentRepository;
     private final ExtractionService extractionService;
     private final SummarizeService summarizeService;
+    private final AnomalyService anomalyService;
 
     public DocumentProcessingService(OcrService ocrService, StorageService storageService,
                                       DocumentRepository documentRepository, ExtractionService extractionService,
-                                      SummarizeService summarizeService) {
+                                      SummarizeService summarizeService, AnomalyService anomalyService) {
         this.ocrService = ocrService;
         this.storageService = storageService;
         this.documentRepository = documentRepository;
         this.extractionService = extractionService;
         this.summarizeService = summarizeService;
+        this.anomalyService = anomalyService;
     }
 
     @Async
@@ -109,6 +111,13 @@ public class DocumentProcessingService {
                 summarizeService.summarizeDocument(doc);
             } catch (Throwable t) {
                 log.error("Summarization failed for document id={}", doc.getId(), t);
+            }
+            
+            // Phase 6: run anomaly checks against the workspace template
+            try {
+                anomalyService.checkAnomalies(doc);
+            } catch (Throwable t) {
+                log.error("Anomaly checking failed for document id={}", doc.getId(), t);
             }
         }
     }

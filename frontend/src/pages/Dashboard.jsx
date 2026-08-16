@@ -98,9 +98,14 @@ export default function Dashboard() {
             <main className="max-w-5xl mx-auto px-6 py-12">
                 <div className="flex items-center justify-between mb-8">
                     <h1>Dashboard</h1>
-                    <button className="btn-primary" onClick={() => navigate('/upload')}>
-                        Upload Document
-                    </button>
+                    <div className="flex gap-3">
+                        <button className="btn-secondary" onClick={() => navigate('/templates')}>
+                            Manage Templates
+                        </button>
+                        <button className="btn-primary" onClick={() => navigate('/upload')}>
+                            Upload Document
+                        </button>
+                    </div>
                 </div>
 
                 {documents.length === 0 ? (

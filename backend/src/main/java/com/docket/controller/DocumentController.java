@@ -17,8 +17,10 @@ import com.docket.entity.Document;
 import com.docket.entity.DocumentType;
 import com.docket.entity.Extraction;
 import com.docket.entity.Summary;
+import com.docket.entity.AnomalyFlag;
 import com.docket.repository.ExtractionRepository;
 import com.docket.repository.SummaryRepository;
+import com.docket.repository.AnomalyFlagRepository;
 import com.docket.service.DocumentService;
 
 @RestController
@@ -28,11 +30,14 @@ public class DocumentController {
     private final DocumentService documentService;
     private final ExtractionRepository extractionRepository;
     private final SummaryRepository summaryRepository;
+    private final AnomalyFlagRepository anomalyFlagRepository;
 
-    public DocumentController(DocumentService documentService, ExtractionRepository extractionRepository, SummaryRepository summaryRepository) {
+    public DocumentController(DocumentService documentService, ExtractionRepository extractionRepository, 
+                              SummaryRepository summaryRepository, AnomalyFlagRepository anomalyFlagRepository) {
         this.documentService = documentService;
         this.extractionRepository = extractionRepository;
         this.summaryRepository = summaryRepository;
+        this.anomalyFlagRepository = anomalyFlagRepository;
     }
 
     /**
@@ -97,5 +102,19 @@ public class DocumentController {
 
         Optional<Summary> summary = summaryRepository.findByDocumentId(id);
         return ResponseEntity.ok(summary.orElse(null));
+    }
+
+    /**
+     * Fetches any anomaly flags associated with the document.
+     */
+    @GetMapping("/{id}/anomalies")
+    public ResponseEntity<List<AnomalyFlag>> getAnomalies(
+            @PathVariable("id") Integer id,
+            Authentication authentication) {
+        Integer userId = (Integer) authentication.getPrincipal();
+        documentService.getDocumentForWorkspace(userId, id);
+
+        List<AnomalyFlag> anomalies = anomalyFlagRepository.findByDocumentId(id);
+        return ResponseEntity.ok(anomalies);
     }
 }
