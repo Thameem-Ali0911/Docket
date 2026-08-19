@@ -1,9 +1,11 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { motion } from 'motion/react';
 import { apiFetch, setToken } from '../lib/api';
+import AmbientAurora from '../components/ui/AmbientAurora';
 
 /**
- * Login page — email + password form.
+ * Login page — email + password form with Aurora Obsidian visual styling.
  * On success: stores JWT, redirects to /dashboard.
  */
 export default function Login() {
@@ -34,21 +36,32 @@ export default function Login() {
     }
 
     return (
-        <div className="min-h-screen flex items-center justify-center px-4"
+        <div className="min-h-screen relative flex items-center justify-center px-4 overflow-hidden"
              style={{ background: 'var(--color-bg)' }}>
-            <div className="card w-full max-w-md p-8">
+            {/* Ambient Aurora Light Canvas */}
+            <AmbientAurora opacity={0.55} />
+
+            <motion.div
+                initial={{ opacity: 0, y: 14 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.35, ease: 'easeOut' }}
+                className="card relative w-full max-w-md p-8 z-10"
+                style={{
+                    background: 'rgba(27, 24, 48, 0.82)',
+                    boxShadow: '0 12px 40px rgba(0, 0, 0, 0.45), 0 0 60px rgba(124, 92, 252, 0.12)',
+                }}
+            >
                 {/* Logo / Brand */}
                 <div className="text-center mb-8">
-                    <h1 className="text-3xl font-bold mb-2"
-                        style={{ fontFamily: 'var(--font-heading)', color: 'var(--color-primary)' }}>
-                        Docket
+                    <h1 className="text-3xl font-bold mb-2 tracking-tight">
+                        <span className="text-aurora">Docket</span>
                     </h1>
-                    <p style={{ color: 'var(--color-text-secondary)', fontSize: '15px' }}>
-                        Sign in to your workspace
+                    <p style={{ color: 'var(--color-text-secondary)', fontSize: '14px' }}>
+                        Document intelligence & automated anomaly detection
                     </p>
                 </div>
 
-                {error && <div className="alert-error mb-4">{error}</div>}
+                {error && <div className="alert-error mb-5">{error}</div>}
 
                 <form onSubmit={handleSubmit}>
                     <div className="mb-4">
@@ -84,15 +97,15 @@ export default function Login() {
                         className="btn-primary w-full"
                         disabled={loading}
                     >
-                        {loading ? 'Signing in…' : 'Sign in'}
+                        {loading ? 'Signing in…' : 'Sign In'}
                     </button>
                 </form>
 
                 <p className="text-center mt-6" style={{ color: 'var(--color-text-secondary)', fontSize: '14px' }}>
                     Don't have an account?{' '}
-                    <Link to="/signup" style={{ fontWeight: 500 }}>Create one</Link>
+                    <Link to="/signup" style={{ fontWeight: 600, color: 'var(--color-aurora-end)' }}>Create one</Link>
                 </p>
-            </div>
+            </motion.div>
         </div>
     );
 }

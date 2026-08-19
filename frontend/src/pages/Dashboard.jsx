@@ -1,10 +1,26 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { motion } from 'motion/react';
+import {
+    FileText,
+    CheckCircle2,
+    AlertTriangle,
+    Clock,
+    XCircle,
+    Download,
+    Upload,
+    SlidersHorizontal,
+    Search,
+    X,
+    ExternalLink
+} from 'lucide-react';
 import { apiFetch, clearToken, downloadExport } from '../lib/api';
+import AmbientAurora from '../components/ui/AmbientAurora';
 
 /**
- * Dashboard page — provides document intelligence overview,
- * rich filtering (by type, anomaly status, date), and CSV/JSON export.
+ * Dashboard page — "Aurora Obsidian" edition.
+ * Features ambient light, glassmorphism, Framer Motion staggered animations,
+ * multi-criteria filtering, overview metrics, and single/bulk CSV/JSON export.
  */
 export default function Dashboard() {
     const navigate = useNavigate();
@@ -74,7 +90,6 @@ export default function Dashboard() {
     // Filtered documents calculation
     const filteredDocuments = useMemo(() => {
         return documents.filter(doc => {
-            // Search query filter (matches filename, id, or failed reason)
             if (searchQuery.trim()) {
                 const query = searchQuery.toLowerCase();
                 const filename = doc.fileUrl ? doc.fileUrl.split('/').pop().toLowerCase() : '';
@@ -85,12 +100,10 @@ export default function Dashboard() {
                 if (!matchesSearch) return false;
             }
 
-            // Type filter
             if (typeFilter !== 'ALL' && doc.type !== typeFilter) {
                 return false;
             }
 
-            // Status & Flag filter
             if (statusFilter === 'FLAGGED') {
                 if (doc.status !== 'PROCESSED' || doc.anomalyCount <= 0) return false;
             } else if (statusFilter === 'CLEAN') {
@@ -101,7 +114,6 @@ export default function Dashboard() {
                 if (doc.status !== 'FAILED') return false;
             }
 
-            // Date filter
             if (dateFilter !== 'ALL' && doc.uploadedAt) {
                 const docDate = new Date(doc.uploadedAt);
                 const now = new Date();
@@ -121,7 +133,7 @@ export default function Dashboard() {
         });
     }, [documents, searchQuery, typeFilter, statusFilter, dateFilter]);
 
-    // Statistics counts
+    // Statistics
     const stats = useMemo(() => {
         const total = documents.length;
         const processed = documents.filter(d => d.status === 'PROCESSED').length;
@@ -142,31 +154,39 @@ export default function Dashboard() {
 
     if (loading) {
         return (
-            <div className="min-h-screen flex items-center justify-center" style={{ background: 'var(--color-bg)' }}>
-                <p style={{ color: 'var(--color-text-secondary)' }}>Loading dashboard…</p>
+            <div className="min-h-screen flex items-center justify-center relative overflow-hidden" style={{ background: 'var(--color-bg)' }}>
+                <AmbientAurora opacity={0.35} />
+                <div className="flex flex-col items-center gap-3 z-10">
+                    <div className="w-8 h-8 rounded-full border-2 border-t-transparent animate-spin" style={{ borderColor: 'var(--color-aurora-start)', borderTopColor: 'transparent' }} />
+                    <p style={{ color: 'var(--color-text-secondary)', fontSize: '14px' }}>Loading workspace…</p>
+                </div>
             </div>
         );
     }
 
     if (loadError) {
         return (
-            <div className="min-h-screen flex items-center justify-center px-6" style={{ background: 'var(--color-bg)' }}>
-                <div className="card p-8 text-center" style={{ maxWidth: '420px' }}>
-                    <p className="alert-error" style={{ marginBottom: '16px' }}>{loadError}</p>
-                    <button className="btn-primary" onClick={loadDashboard}>Retry</button>
+            <div className="min-h-screen flex items-center justify-center px-6 relative overflow-hidden" style={{ background: 'var(--color-bg)' }}>
+                <AmbientAurora opacity={0.35} />
+                <div className="card p-8 text-center max-w-md w-full z-10">
+                    <p className="alert-error mb-5">{loadError}</p>
+                    <button className="btn-primary w-full" onClick={loadDashboard}>Retry</button>
                 </div>
             </div>
         );
     }
 
     return (
-        <div className="min-h-screen" style={{ background: 'var(--color-bg)' }}>
+        <div className="min-h-screen relative overflow-x-hidden" style={{ background: 'var(--color-bg)' }}>
+            {/* Ambient Aurora Top Glow */}
+            <AmbientAurora opacity={0.4} />
+
             {/* Top navigation bar */}
-            <nav className="card flex items-center justify-between px-6 py-3"
-                 style={{ borderRadius: 0, borderTop: 'none', borderLeft: 'none', borderRight: 'none' }}>
+            <nav className="card relative z-20 flex items-center justify-between px-6 py-3.5"
+                 style={{ borderRadius: 0, borderTop: 'none', borderLeft: 'none', borderRight: 'none', background: 'rgba(18, 16, 27, 0.85)' }}>
                 <div className="flex items-center gap-3">
-                    <h2 className="text-xl font-bold" style={{ fontFamily: 'var(--font-heading)', color: 'var(--color-primary)' }}>
-                        Docket
+                    <h2 className="text-xl font-bold tracking-tight">
+                        <span className="text-aurora">Docket</span>
                     </h2>
                     {user && (
                         <span className="badge badge-info">{user.workspaceName}</span>
@@ -174,62 +194,113 @@ export default function Dashboard() {
                 </div>
                 <div className="flex items-center gap-4">
                     {user && (
-                        <span style={{ color: 'var(--color-text-secondary)', fontSize: '14px' }}>
+                        <span style={{ color: 'var(--color-text-secondary)', fontSize: '13px' }}>
                             {user.email}
                         </span>
                     )}
-                    <button onClick={handleLogout} className="btn-secondary" style={{ padding: '6px 14px', fontSize: '13px' }}>
+                    <button onClick={handleLogout} className="btn-secondary" style={{ padding: '5px 14px', fontSize: '13px' }}>
                         Sign out
                     </button>
                 </div>
             </nav>
 
             {/* Main content */}
-            <main className="max-w-6xl mx-auto px-6 py-10">
+            <main className="max-w-6xl mx-auto px-6 py-10 relative z-10">
                 {/* Header */}
-                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
+                <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.3 }}
+                    className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8"
+                >
                     <div>
-                        <h1>Dashboard</h1>
-                        <p style={{ color: 'var(--color-text-secondary)', marginTop: '4px' }}>
-                            Monitor document processing, anomaly flags, and export workspace intelligence.
+                        <h1 className="text-3xl font-bold">Dashboard</h1>
+                        <p style={{ color: 'var(--color-text-secondary)', marginTop: '4px', fontSize: '14px' }}>
+                            Document intelligence, automated template anomaly checking, and data export.
                         </p>
                     </div>
                     <div className="flex flex-wrap gap-3">
                         <button className="btn-secondary" onClick={() => navigate('/templates')}>
+                            <SlidersHorizontal size={15} />
                             Manage Templates
                         </button>
                         <button className="btn-primary" onClick={() => navigate('/upload')}>
+                            <Upload size={15} />
                             Upload Document
                         </button>
                     </div>
-                </div>
+                </motion.div>
 
-                {/* Overview Metrics Cards */}
-                <div className="grid grid-cols-2 sm:grid-cols-5 gap-4 mb-8">
-                    <div className="card p-4">
-                        <p className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-1">Total Uploads</p>
-                        <p className="text-2xl font-bold" style={{ color: 'var(--color-primary)' }}>{stats.total}</p>
-                    </div>
-                    <div className="card p-4">
-                        <p className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-1">Processed</p>
-                        <p className="text-2xl font-bold text-green-700">{stats.processed}</p>
-                    </div>
-                    <div className="card p-4">
-                        <p className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-1">Flagged</p>
-                        <p className="text-2xl font-bold" style={{ color: 'var(--color-warning)' }}>{stats.flagged}</p>
-                    </div>
-                    <div className="card p-4">
-                        <p className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-1">Processing</p>
-                        <p className="text-2xl font-bold text-blue-600">{stats.pending}</p>
-                    </div>
-                    <div className="card p-4">
-                        <p className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-1">Failed</p>
-                        <p className="text-2xl font-bold text-red-600">{stats.failed}</p>
-                    </div>
+                {/* Overview Metrics Cards with Hover-Lift */}
+                <div className="grid grid-cols-2 sm:grid-cols-5 gap-3.5 mb-8">
+                    <motion.div
+                        whileHover={{ y: -2 }}
+                        transition={{ duration: 0.15 }}
+                        className="card p-4 card-interactive"
+                        style={{ background: 'rgba(27, 24, 48, 0.85)' }}
+                    >
+                        <div className="flex items-center justify-between mb-2">
+                            <span className="text-xs font-semibold uppercase tracking-wider text-purple-300">Total</span>
+                            <FileText size={16} className="text-purple-400 opacity-80" />
+                        </div>
+                        <p className="text-2xl font-bold" style={{ color: 'var(--color-text-primary)' }}>{stats.total}</p>
+                    </motion.div>
+
+                    <motion.div
+                        whileHover={{ y: -2 }}
+                        transition={{ duration: 0.15 }}
+                        className="card p-4 card-interactive"
+                        style={{ background: 'rgba(27, 24, 48, 0.85)' }}
+                    >
+                        <div className="flex items-center justify-between mb-2">
+                            <span className="text-xs font-semibold uppercase tracking-wider text-emerald-300">Processed</span>
+                            <CheckCircle2 size={16} className="text-emerald-400 opacity-80" />
+                        </div>
+                        <p className="text-2xl font-bold text-emerald-400">{stats.processed}</p>
+                    </motion.div>
+
+                    <motion.div
+                        whileHover={{ y: -2 }}
+                        transition={{ duration: 0.15 }}
+                        className="card p-4 card-interactive"
+                        style={{ background: 'rgba(27, 24, 48, 0.85)' }}
+                    >
+                        <div className="flex items-center justify-between mb-2">
+                            <span className="text-xs font-semibold uppercase tracking-wider text-amber-300">Flagged</span>
+                            <AlertTriangle size={16} className="text-amber-400 opacity-80" />
+                        </div>
+                        <p className="text-2xl font-bold text-amber-400">{stats.flagged}</p>
+                    </motion.div>
+
+                    <motion.div
+                        whileHover={{ y: -2 }}
+                        transition={{ duration: 0.15 }}
+                        className="card p-4 card-interactive"
+                        style={{ background: 'rgba(27, 24, 48, 0.85)' }}
+                    >
+                        <div className="flex items-center justify-between mb-2">
+                            <span className="text-xs font-semibold uppercase tracking-wider text-cyan-300">Processing</span>
+                            <Clock size={16} className="text-cyan-400 opacity-80" />
+                        </div>
+                        <p className="text-2xl font-bold text-cyan-400">{stats.pending}</p>
+                    </motion.div>
+
+                    <motion.div
+                        whileHover={{ y: -2 }}
+                        transition={{ duration: 0.15 }}
+                        className="card p-4 card-interactive"
+                        style={{ background: 'rgba(27, 24, 48, 0.85)' }}
+                    >
+                        <div className="flex items-center justify-between mb-2">
+                            <span className="text-xs font-semibold uppercase tracking-wider text-rose-300">Failed</span>
+                            <XCircle size={16} className="text-rose-400 opacity-80" />
+                        </div>
+                        <p className="text-2xl font-bold text-rose-400">{stats.failed}</p>
+                    </motion.div>
                 </div>
 
                 {/* Filter and Action Bar */}
-                <div className="card p-4 mb-6">
+                <div className="card p-4 mb-6" style={{ background: 'rgba(27, 24, 48, 0.85)' }}>
                     <div className="flex flex-col md:flex-row gap-4 justify-between items-stretch md:items-center">
                         {/* Search & Selectors */}
                         <div className="flex flex-wrap flex-1 gap-3 items-center">
@@ -240,13 +311,10 @@ export default function Dashboard() {
                                     placeholder="Search filename, ID, or keywords…"
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value)}
-                                    className="input"
-                                    style={{ paddingLeft: '32px' }}
+                                    className="input text-sm"
+                                    style={{ paddingLeft: '34px' }}
                                 />
-                                <svg className="absolute left-2.5 top-3 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <circle cx="11" cy="11" r="8" strokeWidth="2" />
-                                    <line x1="21" y1="21" x2="16.65" y2="16.65" strokeWidth="2" strokeLinecap="round" />
-                                </svg>
+                                <Search size={15} className="absolute left-2.5 top-3 text-gray-400" />
                             </div>
 
                             {/* Type Filter */}
@@ -290,10 +358,11 @@ export default function Dashboard() {
                                 <button
                                     onClick={clearAllFilters}
                                     className="btn-secondary"
-                                    style={{ padding: '8px 12px', fontSize: '13px' }}
+                                    style={{ padding: '6px 12px', fontSize: '13px' }}
                                     title="Reset all filters"
                                 >
-                                    ✕ Clear
+                                    <X size={13} />
+                                    Clear
                                 </button>
                             )}
                         </div>
@@ -301,24 +370,26 @@ export default function Dashboard() {
                         {/* Bulk Export Actions */}
                         {documents.length > 0 && (
                             <div className="flex items-center gap-2 border-t md:border-t-0 pt-3 md:pt-0 shrink-0">
-                                <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider mr-1">Bulk Export:</span>
+                                <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider mr-1">Bulk Export:</span>
                                 <button
                                     className="btn-secondary"
                                     onClick={() => handleBulkExport('csv')}
                                     disabled={exporting}
-                                    style={{ padding: '6px 12px', fontSize: '12px' }}
+                                    style={{ padding: '5px 12px', fontSize: '12px' }}
                                     title="Export all documents as CSV"
                                 >
-                                    📥 CSV
+                                    <Download size={13} />
+                                    CSV
                                 </button>
                                 <button
                                     className="btn-secondary"
                                     onClick={() => handleBulkExport('json')}
                                     disabled={exporting}
-                                    style={{ padding: '6px 12px', fontSize: '12px' }}
+                                    style={{ padding: '5px 12px', fontSize: '12px' }}
                                     title="Export all documents as JSON"
                                 >
-                                    📥 JSON
+                                    <Download size={13} />
+                                    JSON
                                 </button>
                             </div>
                         )}
@@ -327,30 +398,28 @@ export default function Dashboard() {
 
                 {/* Documents Table */}
                 {documents.length === 0 ? (
-                    <div className="card p-12 text-center">
-                        <div style={{ marginBottom: '16px' }}>
-                            <svg width="48" height="48" viewBox="0 0 24 24" fill="none"
-                                 stroke="var(--color-text-disabled)" strokeWidth="1.5"
-                                 strokeLinecap="round" strokeLinejoin="round"
-                                 style={{ margin: '0 auto' }}>
-                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                                <polyline points="14 2 14 8 20 8" />
-                                <line x1="16" y1="13" x2="8" y2="13" />
-                                <line x1="16" y1="17" x2="8" y2="17" />
-                                <polyline points="10 9 9 9 8 9" />
-                            </svg>
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        className="card p-12 text-center"
+                        style={{ background: 'rgba(27, 24, 48, 0.85)' }}
+                    >
+                        <div className="w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-4"
+                             style={{ background: 'rgba(124, 92, 252, 0.12)', color: 'var(--color-aurora-start)' }}>
+                            <FileText size={28} />
                         </div>
-                        <h3 style={{ marginBottom: '8px' }}>No documents yet</h3>
-                        <p style={{ color: 'var(--color-text-secondary)', marginBottom: '24px', fontSize: '15px' }}>
-                            Upload your first document to get started with extraction, summarization, and anomaly detection.
+                        <h3 className="text-lg font-bold mb-2">No documents yet</h3>
+                        <p style={{ color: 'var(--color-text-secondary)', marginBottom: '24px', fontSize: '14px', maxWidth: '420px', margin: '0 auto 24px' }}>
+                            Upload your first invoice, contract, or resume to get started with automated extraction and anomaly checking.
                         </p>
                         <button className="btn-primary" onClick={() => navigate('/upload')}>
-                            Upload document
+                            <Upload size={15} />
+                            Upload Document
                         </button>
-                    </div>
+                    </motion.div>
                 ) : filteredDocuments.length === 0 ? (
-                    <div className="card p-12 text-center">
-                        <h3 style={{ marginBottom: '8px' }}>No matching documents</h3>
+                    <div className="card p-12 text-center" style={{ background: 'rgba(27, 24, 48, 0.85)' }}>
+                        <h3 className="text-lg font-bold mb-2">No matching documents</h3>
                         <p style={{ color: 'var(--color-text-secondary)', marginBottom: '20px', fontSize: '14px' }}>
                             No documents matched your search and filter criteria.
                         </p>
@@ -359,44 +428,56 @@ export default function Dashboard() {
                         </button>
                     </div>
                 ) : (
-                    <div className="card overflow-hidden">
+                    <div className="card overflow-hidden" style={{ background: 'rgba(27, 24, 48, 0.85)' }}>
                         <div className="overflow-x-auto">
                             <table className="w-full text-left border-collapse">
                                 <thead>
-                                    <tr style={{ borderBottom: '1px solid var(--color-border)', backgroundColor: '#F9FAFB' }}>
-                                        <th className="py-3 px-4 font-semibold text-xs text-gray-500 uppercase tracking-wider">Type</th>
-                                        <th className="py-3 px-4 font-semibold text-xs text-gray-500 uppercase tracking-wider">Document / File</th>
-                                        <th className="py-3 px-4 font-semibold text-xs text-gray-500 uppercase tracking-wider">Status</th>
-                                        <th className="py-3 px-4 font-semibold text-xs text-gray-500 uppercase tracking-wider">Anomaly Flags</th>
-                                        <th className="py-3 px-4 font-semibold text-xs text-gray-500 uppercase tracking-wider">Uploaded At</th>
-                                        <th className="py-3 px-4 text-right font-semibold text-xs text-gray-500 uppercase tracking-wider">Actions</th>
+                                    <tr style={{ borderBottom: '1px solid var(--color-border)', backgroundColor: 'var(--color-surface-raised)' }}>
+                                        <th className="py-3 px-4 font-semibold text-xs text-gray-400 uppercase tracking-wider">Type</th>
+                                        <th className="py-3 px-4 font-semibold text-xs text-gray-400 uppercase tracking-wider">Document / File</th>
+                                        <th className="py-3 px-4 font-semibold text-xs text-gray-400 uppercase tracking-wider">Status</th>
+                                        <th className="py-3 px-4 font-semibold text-xs text-gray-400 uppercase tracking-wider">Anomaly Flags</th>
+                                        <th className="py-3 px-4 font-semibold text-xs text-gray-400 uppercase tracking-wider">Uploaded At</th>
+                                        <th className="py-3 px-4 text-right font-semibold text-xs text-gray-400 uppercase tracking-wider">Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {filteredDocuments.map(doc => {
+                                    {filteredDocuments.map((doc, idx) => {
                                         const filename = doc.fileUrl ? doc.fileUrl.split('/').pop() : 'Document';
                                         return (
-                                            <tr key={doc.id}
-                                                className="hover:bg-gray-50/50 cursor-pointer transition-colors"
+                                            <motion.tr
+                                                key={doc.id}
+                                                initial={{ opacity: 0, y: 6 }}
+                                                animate={{ opacity: 1, y: 0 }}
+                                                transition={{ duration: 0.25, delay: Math.min(idx * 0.04, 0.4) }}
+                                                className="hover:bg-purple-950/20 cursor-pointer transition-colors"
                                                 onClick={() => navigate(`/documents/${doc.id}`)}
-                                                style={{ borderBottom: '1px solid var(--color-border)' }}>
-                                                <td className="py-3 px-4">
-                                                    <span className="font-semibold text-xs px-2.5 py-1 rounded bg-gray-100 text-gray-800">
+                                                style={{ borderBottom: '1px solid var(--color-border)' }}
+                                            >
+                                                <td className="py-3.5 px-4">
+                                                    <span className="font-semibold text-xs px-2.5 py-1 rounded"
+                                                          style={{ background: 'rgba(124, 92, 252, 0.15)', color: 'var(--color-aurora-start)', border: '1px solid rgba(124, 92, 252, 0.25)' }}>
                                                         {doc.type}
                                                     </span>
                                                 </td>
-                                                <td className="py-3 px-4 text-sm font-medium" style={{ color: 'var(--color-text-primary)' }}>
+                                                <td className="py-3.5 px-4 text-sm font-medium" style={{ color: 'var(--color-text-primary)' }}>
                                                     <div>
-                                                        <span className="hover:underline">{filename}</span>
-                                                        <p className="text-xs text-gray-400 font-normal">ID: {doc.id}</p>
+                                                        <span className="hover:text-cyan-400 transition-colors">{filename}</span>
+                                                        <p className="text-xs text-gray-500 font-normal">ID: #{doc.id}</p>
                                                     </div>
                                                 </td>
-                                                <td className="py-3 px-4">
-                                                    <span className={`badge ${doc.status === 'PENDING' ? 'badge-warning' : doc.status === 'PROCESSED' ? 'badge-success' : 'badge-danger'}`}>
+                                                <td className="py-3.5 px-4">
+                                                    <span className={`badge ${
+                                                        doc.status === 'PENDING'
+                                                            ? 'badge-warning badge-pulse'
+                                                            : doc.status === 'PROCESSED'
+                                                            ? 'badge-success'
+                                                            : 'badge-danger'
+                                                    }`}>
                                                         {doc.status}
                                                     </span>
                                                 </td>
-                                                <td className="py-3 px-4">
+                                                <td className="py-3.5 px-4">
                                                     {doc.status === 'PROCESSED' ? (
                                                         doc.anomalyCount > 0 ? (
                                                             <span className="badge badge-warning" title={`${doc.anomalyCount} anomalies detected`}>
@@ -408,32 +489,32 @@ export default function Dashboard() {
                                                             </span>
                                                         )
                                                     ) : (
-                                                        <span className="text-xs text-gray-400">—</span>
+                                                        <span className="text-xs text-gray-500">—</span>
                                                     )}
                                                 </td>
-                                                <td className="py-3 px-4 text-sm" style={{ color: 'var(--color-text-secondary)' }}>
+                                                <td className="py-3.5 px-4 text-sm" style={{ color: 'var(--color-text-secondary)' }}>
                                                     {new Date(doc.uploadedAt).toLocaleString()}
                                                 </td>
-                                                <td className="py-3 px-4 text-right" onClick={(e) => e.stopPropagation()}>
+                                                <td className="py-3.5 px-4 text-right" onClick={(e) => e.stopPropagation()}>
                                                     <div className="flex items-center justify-end gap-2">
                                                         <button
                                                             className="text-xs font-semibold hover:underline"
-                                                            style={{ color: 'var(--color-primary)' }}
+                                                            style={{ color: 'var(--color-aurora-end)' }}
                                                             onClick={() => navigate(`/documents/${doc.id}`)}
                                                         >
                                                             View
                                                         </button>
-                                                        <span className="text-gray-300">|</span>
+                                                        <span className="text-gray-600">|</span>
                                                         <button
-                                                            className="text-xs text-gray-500 hover:text-gray-900"
+                                                            className="text-xs text-gray-400 hover:text-white transition-colors"
                                                             onClick={(e) => handleSingleExport(doc.id, 'csv', e)}
                                                             title="Export CSV"
                                                         >
                                                             CSV
                                                         </button>
-                                                        <span className="text-gray-300">|</span>
+                                                        <span className="text-gray-600">|</span>
                                                         <button
-                                                            className="text-xs text-gray-500 hover:text-gray-900"
+                                                            className="text-xs text-gray-400 hover:text-white transition-colors"
                                                             onClick={(e) => handleSingleExport(doc.id, 'json', e)}
                                                             title="Export JSON"
                                                         >
@@ -441,7 +522,7 @@ export default function Dashboard() {
                                                         </button>
                                                     </div>
                                                 </td>
-                                            </tr>
+                                            </motion.tr>
                                         );
                                     })}
                                 </tbody>

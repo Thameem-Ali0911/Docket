@@ -1,9 +1,11 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { motion } from 'motion/react';
 import { apiFetch, setToken } from '../lib/api';
+import AmbientAurora from '../components/ui/AmbientAurora';
 
 /**
- * Signup page — email + password + workspace name form.
+ * Signup page — email + password + workspace name form with Aurora Obsidian visual styling.
  * On success: stores JWT, redirects to /dashboard.
  */
 export default function Signup() {
@@ -35,21 +37,32 @@ export default function Signup() {
     }
 
     return (
-        <div className="min-h-screen flex items-center justify-center px-4"
+        <div className="min-h-screen relative flex items-center justify-center px-4 overflow-hidden"
              style={{ background: 'var(--color-bg)' }}>
-            <div className="card w-full max-w-md p-8">
+            {/* Ambient Aurora Light Canvas */}
+            <AmbientAurora opacity={0.55} />
+
+            <motion.div
+                initial={{ opacity: 0, y: 14 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.35, ease: 'easeOut' }}
+                className="card relative w-full max-w-md p-8 z-10"
+                style={{
+                    background: 'rgba(27, 24, 48, 0.82)',
+                    boxShadow: '0 12px 40px rgba(0, 0, 0, 0.45), 0 0 60px rgba(124, 92, 252, 0.12)',
+                }}
+            >
                 {/* Logo / Brand */}
                 <div className="text-center mb-8">
-                    <h1 className="text-3xl font-bold mb-2"
-                        style={{ fontFamily: 'var(--font-heading)', color: 'var(--color-primary)' }}>
-                        Docket
+                    <h1 className="text-3xl font-bold mb-2 tracking-tight">
+                        <span className="text-aurora">Docket</span>
                     </h1>
-                    <p style={{ color: 'var(--color-text-secondary)', fontSize: '15px' }}>
-                        Create your workspace
+                    <p style={{ color: 'var(--color-text-secondary)', fontSize: '14px' }}>
+                        Create your workspace to start analyzing documents
                     </p>
                 </div>
 
-                {error && <div className="alert-error mb-4">{error}</div>}
+                {error && <div className="alert-error mb-5">{error}</div>}
 
                 <form onSubmit={handleSubmit}>
                     <div className="mb-4">
@@ -99,15 +112,15 @@ export default function Signup() {
                         className="btn-primary w-full"
                         disabled={loading}
                     >
-                        {loading ? 'Creating account…' : 'Create account'}
+                        {loading ? 'Creating workspace…' : 'Create Workspace'}
                     </button>
                 </form>
 
                 <p className="text-center mt-6" style={{ color: 'var(--color-text-secondary)', fontSize: '14px' }}>
                     Already have an account?{' '}
-                    <Link to="/login" style={{ fontWeight: 500 }}>Sign in</Link>
+                    <Link to="/login" style={{ fontWeight: 600, color: 'var(--color-aurora-end)' }}>Sign in</Link>
                 </p>
-            </div>
+            </motion.div>
         </div>
     );
 }

@@ -1,9 +1,12 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { motion } from 'motion/react';
+import { ArrowLeft, SlidersHorizontal, CheckCircle2, AlertTriangle, Trash2, Eye, Upload } from 'lucide-react';
 import { apiFetch, clearToken } from '../lib/api';
+import AmbientAurora from '../components/ui/AmbientAurora';
 
 const DOCUMENT_TYPES = [
-    { type: 'INVOICE', label: 'Invoices', singular: 'Invoice', description: 'Standard billing layout, typical vendor terms, tax structures, and line item formats.' },
+    { type: 'INVOICE', label: 'Invoices', singular: 'Invoice', description: 'Standard billing layout, vendor terms, tax structures, and line item formats.' },
     { type: 'CONTRACT', label: 'Contracts', singular: 'Contract', description: 'Standard legal terms, termination notice clauses, liability limitations, and governing law.' },
     { type: 'RESUME', label: 'Resumes', singular: 'Resume', description: 'Expected qualification standards, required skill profiles, and section structures.' },
 ];
@@ -42,7 +45,6 @@ export default function TemplateManager() {
 
             setDocuments(docsData);
 
-            // Map list of templates by document type
             const templateMap = {};
             if (Array.isArray(templatesData)) {
                 templatesData.forEach(t => {
@@ -115,8 +117,12 @@ export default function TemplateManager() {
 
     if (loading) {
         return (
-            <div className="min-h-screen flex items-center justify-center" style={{ background: 'var(--color-bg)' }}>
-                <p style={{ color: 'var(--color-text-secondary)' }}>Loading templates…</p>
+            <div className="min-h-screen flex items-center justify-center relative overflow-hidden" style={{ background: 'var(--color-bg)' }}>
+                <AmbientAurora opacity={0.35} />
+                <div className="flex flex-col items-center gap-3 z-10">
+                    <div className="w-8 h-8 rounded-full border-2 border-t-transparent animate-spin" style={{ borderColor: 'var(--color-aurora-start)', borderTopColor: 'transparent' }} />
+                    <p style={{ color: 'var(--color-text-secondary)', fontSize: '14px' }}>Loading templates…</p>
+                </div>
             </div>
         );
     }
@@ -126,36 +132,48 @@ export default function TemplateManager() {
     const matchingDocs = documents.filter(d => d.status === 'PROCESSED' && d.type === activeType);
 
     return (
-        <div className="min-h-screen" style={{ background: 'var(--color-bg)' }}>
+        <div className="min-h-screen relative overflow-hidden" style={{ background: 'var(--color-bg)' }}>
+            <AmbientAurora opacity={0.4} />
+
             {/* Top navigation bar */}
-            <nav className="card flex items-center justify-between px-6 py-3"
-                 style={{ borderRadius: 0, borderTop: 'none', borderLeft: 'none', borderRight: 'none' }}>
+            <nav className="card relative z-20 flex items-center justify-between px-6 py-3.5"
+                 style={{ borderRadius: 0, borderTop: 'none', borderLeft: 'none', borderRight: 'none', background: 'rgba(18, 16, 27, 0.85)' }}>
                 <div className="flex items-center gap-3">
-                    <h2 className="text-xl font-bold cursor-pointer"
-                        onClick={() => navigate('/dashboard')}
-                        style={{ fontFamily: 'var(--font-heading)', color: 'var(--color-primary)' }}>
-                        Docket
+                    <h2 className="text-xl font-bold cursor-pointer tracking-tight"
+                        onClick={() => navigate('/dashboard')}>
+                        <span className="text-aurora">Docket</span>
                     </h2>
                 </div>
-                <button onClick={() => navigate('/dashboard')} className="btn-secondary" style={{ padding: '6px 14px', fontSize: '13px' }}>
-                    ← Back to dashboard
+                <button onClick={() => navigate('/dashboard')} className="btn-secondary" style={{ padding: '5px 14px', fontSize: '13px' }}>
+                    <ArrowLeft size={14} />
+                    Back to Dashboard
                 </button>
             </nav>
 
-            <main className="max-w-3xl mx-auto px-6 py-12">
-                <div className="mb-8">
-                    <h1>Template Manager</h1>
-                    <p style={{ color: 'var(--color-text-secondary)', marginTop: '8px' }}>
-                        Set a standard document format per type to compare new uploads against for automatic anomaly and deviation detection.
+            <main className="max-w-3xl mx-auto px-6 py-10 relative z-10">
+                <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.3 }}
+                    className="mb-8"
+                >
+                    <h1 className="text-3xl font-bold">Template Manager</h1>
+                    <p style={{ color: 'var(--color-text-secondary)', marginTop: '6px', fontSize: '14px' }}>
+                        Establish standard benchmark documents per category. New uploads are automatically evaluated against these templates for non-standard terms, unexpected clauses, and deviations.
                     </p>
-                </div>
+                </motion.div>
 
                 {error && <div className="alert-error mb-6">{error}</div>}
                 {successMsg && (
-                    <div className="p-4 rounded-lg bg-green-50 text-green-900 border border-green-200 mb-6 flex items-center justify-between">
-                        <span>{successMsg}</span>
-                        <button onClick={() => setSuccessMsg(null)} className="text-green-700 font-bold ml-4">✕</button>
-                    </div>
+                    <motion.div
+                        initial={{ opacity: 0, y: -8 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="p-4 rounded-xl mb-6 flex items-center justify-between"
+                        style={{ background: 'rgba(52, 211, 153, 0.14)', border: '1px solid rgba(52, 211, 153, 0.3)', color: '#34D399' }}
+                    >
+                        <span className="text-sm font-medium">{successMsg}</span>
+                        <button onClick={() => setSuccessMsg(null)} className="text-emerald-300 font-bold ml-4 hover:text-white">✕</button>
+                    </motion.div>
                 )}
 
                 {/* Document Type Tabs */}
@@ -169,20 +187,19 @@ export default function TemplateManager() {
                                 onClick={() => setActiveType(type)}
                                 className={`py-3 px-5 text-sm font-semibold flex items-center gap-2 border-b-2 transition-all cursor-pointer ${
                                     isActive
-                                        ? 'border-[var(--color-primary)] text-[var(--color-primary)] bg-white rounded-t-lg'
-                                        : 'border-transparent text-gray-500 hover:text-gray-800'
+                                        ? 'border-purple-400 text-white bg-purple-950/30 rounded-t-xl'
+                                        : 'border-transparent text-gray-400 hover:text-white'
                                 }`}
                                 style={{
-                                    borderBottomColor: isActive ? 'var(--color-primary)' : 'transparent',
-                                    color: isActive ? 'var(--color-primary)' : 'var(--color-text-secondary)',
+                                    borderBottomColor: isActive ? 'var(--color-aurora-start)' : 'transparent',
                                     marginBottom: '-1px'
                                 }}
                             >
                                 <span>{label}</span>
                                 {hasTemplate ? (
-                                    <span className="w-2 h-2 rounded-full" style={{ backgroundColor: 'var(--color-accent)' }} title="Template active" />
+                                    <span className="w-2 h-2 rounded-full bg-emerald-400" title="Template active" />
                                 ) : (
-                                    <span className="w-2 h-2 rounded-full bg-gray-300" title="No template set" />
+                                    <span className="w-2 h-2 rounded-full bg-gray-600" title="No template set" />
                                 )}
                             </button>
                         );
@@ -190,37 +207,35 @@ export default function TemplateManager() {
                 </div>
 
                 {/* Active Tab Panel */}
-                <div className="card p-6 mb-8">
-                    <div className="flex items-center justify-between mb-4">
-                        <div>
-                            <h3>{currentTypeConfig?.singular} Template</h3>
-                            <p className="text-xs text-gray-500 mt-1">{currentTypeConfig?.description}</p>
-                        </div>
+                <motion.div
+                    key={activeType}
+                    initial={{ opacity: 0, y: 6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.2 }}
+                    className="card p-6 mb-8"
+                    style={{ background: 'rgba(27, 24, 48, 0.85)' }}
+                >
+                    <div className="mb-5">
+                        <h3 className="text-lg font-bold">{currentTypeConfig?.singular} Template</h3>
+                        <p className="text-xs text-gray-400 mt-1">{currentTypeConfig?.description}</p>
                     </div>
 
                     {currentTemplate ? (
-                        <div className="mb-6 p-4 rounded-lg border flex items-center justify-between"
-                             style={{ background: 'var(--color-bg)', borderColor: 'var(--color-border)' }}>
+                        <div className="mb-6 p-4 rounded-xl border flex items-center justify-between"
+                             style={{ background: 'var(--color-surface-raised)', borderColor: 'var(--color-border)' }}>
                             <div className="flex items-center gap-3">
-                                <div className="p-2 rounded bg-white border" style={{ borderColor: 'var(--color-border)' }}>
-                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none"
-                                         stroke="var(--color-primary)" strokeWidth="2"
-                                         strokeLinecap="round" strokeLinejoin="round">
-                                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                                        <polyline points="14 2 14 8 20 8" />
-                                        <line x1="16" y1="13" x2="8" y2="13" />
-                                        <line x1="16" y1="17" x2="8" y2="17" />
-                                    </svg>
+                                <div className="p-2.5 rounded-lg" style={{ background: 'rgba(124, 92, 252, 0.15)', color: 'var(--color-aurora-start)' }}>
+                                    <CheckCircle2 size={22} className="text-emerald-400" />
                                 </div>
                                 <div>
                                     <div className="flex items-center gap-2">
-                                        <p className="font-semibold text-sm" style={{ color: 'var(--color-text-primary)' }}>
+                                        <p className="font-semibold text-sm text-white">
                                             {currentTemplate.fileUrl.split('/').pop()}
                                         </p>
-                                        <span className="badge badge-success">Active</span>
+                                        <span className="badge badge-success">Active Standard</span>
                                     </div>
-                                    <p className="text-xs mt-1" style={{ color: 'var(--color-text-secondary)' }}>
-                                        Document ID: {currentTemplate.id} • Uploaded: {new Date(currentTemplate.uploadedAt).toLocaleDateString()}
+                                    <p className="text-xs mt-1 text-gray-400">
+                                        ID: #{currentTemplate.id} • Uploaded: {new Date(currentTemplate.uploadedAt).toLocaleDateString()}
                                     </p>
                                 </div>
                             </div>
@@ -228,55 +243,60 @@ export default function TemplateManager() {
                                 <button
                                     onClick={() => navigate(`/documents/${currentTemplate.id}`)}
                                     className="btn-secondary"
-                                    style={{ padding: '6px 12px', fontSize: '13px' }}
+                                    style={{ padding: '5px 12px', fontSize: '12px' }}
                                 >
-                                    View Details
+                                    <Eye size={13} />
+                                    View
                                 </button>
                                 <button
                                     onClick={() => handleDeleteTemplate(activeType)}
                                     disabled={actionLoading}
                                     className="btn-secondary"
                                     style={{
-                                        padding: '6px 12px',
-                                        fontSize: '13px',
-                                        color: 'var(--color-danger)',
-                                        borderColor: 'var(--color-danger-light)'
+                                        padding: '5px 12px',
+                                        fontSize: '12px',
+                                        color: '#F65A5A',
+                                        borderColor: 'rgba(246, 90, 90, 0.3)'
                                     }}
                                     title="Remove this standard template"
                                 >
-                                    Remove Template
+                                    <Trash2 size={13} />
+                                    Remove
                                 </button>
                             </div>
                         </div>
                     ) : (
-                        <div className="mb-6 p-4 rounded-lg border text-sm"
-                             style={{ background: 'var(--color-warning-light)', color: 'var(--color-warning)', borderColor: '#F2DFB8' }}>
-                            ⚠️ No standard template is currently set for {currentTypeConfig?.label}. New {currentTypeConfig?.label.toLowerCase()} will not be checked for deviations.
+                        <div className="mb-6 p-4 rounded-xl border text-sm flex items-center gap-2.5"
+                             style={{ background: 'var(--color-warning-light)', color: '#F5A524', borderColor: 'rgba(245, 165, 36, 0.3)' }}>
+                            <AlertTriangle size={18} className="shrink-0" />
+                            <span>No standard template is currently set for {currentTypeConfig?.label}. New {currentTypeConfig?.label.toLowerCase()} will not be evaluated for anomalies until a benchmark is chosen.</span>
                         </div>
                     )}
 
-                    <div className="pt-2 border-t" style={{ borderColor: 'var(--color-border)' }}>
-                        <label className="block text-sm font-semibold mb-2" style={{ color: 'var(--color-text-primary)' }}>
-                            {currentTemplate ? `Change ${currentTypeConfig?.singular} Template` : `Designate a ${currentTypeConfig?.singular} as Standard Template`}
+                    <div className="pt-4 border-t" style={{ borderColor: 'var(--color-border)' }}>
+                        <label className="block text-xs font-semibold uppercase tracking-wider mb-2 text-gray-400">
+                            {currentTemplate ? `Change ${currentTypeConfig?.singular} Standard` : `Select a processed ${currentTypeConfig?.singular} as standard`}
                         </label>
 
                         {matchingDocs.length === 0 ? (
-                            <div className="p-4 rounded-lg border text-sm bg-gray-50 flex items-center justify-between" style={{ borderColor: 'var(--color-border)' }}>
+                            <div className="p-4 rounded-xl border text-sm flex items-center justify-between"
+                                 style={{ background: 'var(--color-surface-raised)', borderColor: 'var(--color-border)' }}>
                                 <p style={{ color: 'var(--color-text-secondary)' }}>
-                                    You must upload and process at least one {currentTypeConfig?.singular.toLowerCase()} before you can set it as a standard template.
+                                    Upload and process at least one {currentTypeConfig?.singular.toLowerCase()} before setting it as a standard.
                                 </p>
                                 <button
                                     className="btn-primary ml-4 shrink-0"
                                     style={{ padding: '6px 14px', fontSize: '13px' }}
                                     onClick={() => navigate('/upload')}
                                 >
+                                    <Upload size={14} />
                                     Upload {currentTypeConfig?.singular}
                                 </button>
                             </div>
                         ) : (
                             <div className="flex gap-3">
                                 <select
-                                    className="flex-1 input"
+                                    className="flex-1 input text-sm"
                                     value={selectedDocId}
                                     onChange={(e) => setSelectedDocId(e.target.value)}
                                     disabled={actionLoading}
@@ -284,23 +304,22 @@ export default function TemplateManager() {
                                     <option value="">-- Choose a processed {currentTypeConfig?.singular.toLowerCase()} --</option>
                                     {matchingDocs.map(doc => (
                                         <option key={doc.id} value={doc.id}>
-                                            ID: {doc.id} — {doc.fileUrl.split('/').pop()} ({new Date(doc.uploadedAt).toLocaleDateString()})
+                                            ID: #{doc.id} — {doc.fileUrl.split('/').pop()} ({new Date(doc.uploadedAt).toLocaleDateString()})
                                         </option>
                                     ))}
                                 </select>
                                 <button
-                                    className="btn-primary"
+                                    className="btn-primary shrink-0"
                                     disabled={!selectedDocId || actionLoading}
                                     onClick={() => handleSetTemplate(selectedDocId)}
                                 >
-                                    {actionLoading ? 'Saving…' : 'Set as Template'}
+                                    {actionLoading ? 'Saving…' : 'Set as Standard'}
                                 </button>
                             </div>
                         )}
                     </div>
-                </div>
+                </motion.div>
             </main>
         </div>
     );
 }
-

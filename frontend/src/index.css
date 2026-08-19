@@ -1,43 +1,50 @@
 @import "tailwindcss";
 
 /* ===================================================================
-   Docket Design System — Tailwind v4 Theme Tokens
-   Source of truth: design.md
+   Docket Design System — "Aurora Obsidian" (v2 Theme Tokens)
+   Source of truth: design.md §8
    =================================================================== */
 
 @theme {
-    /* --- Brand / Primary --- */
-    --color-primary: #1E3A5F;
-    --color-primary-hover: #16293F;
-    --color-primary-light: #E8EEF4;
+    /* --- Base Surfaces --- */
+    --color-bg: #12101B;
+    --color-surface: #1B1830;
+    --color-surface-raised: #242040;
+    --color-border: rgba(196, 181, 253, 0.14);
 
-    /* --- Accent --- */
-    --color-accent: #0F9D8C;
-    --color-accent-light: #E4F5F2;
+    /* --- Text & Content (Contrast >= 4.5:1 on obsidian base) --- */
+    --color-text-primary: #F3F1FA;
+    --color-text-secondary: #A8A2C4;
+    --color-text-disabled: #645E82;
 
-    /* --- Semantic / Status --- */
-    --color-warning: #B7791F;
-    --color-warning-light: #FBF0DD;
-    --color-danger: #C0392B;
-    --color-danger-light: #FBE9E7;
-    --color-info: #2E6BAA;
+    /* --- Aurora Signature Gradient Tokens --- */
+    --color-aurora-start: #7C5CFC;
+    --color-aurora-end: #22D3EE;
+    --color-aurora-glow: rgba(124, 92, 252, 0.35);
 
-    /* --- Neutrals --- */
-    --color-bg: #F7F8FA;
-    --color-surface: #FFFFFF;
-    --color-border: #E2E5EA;
-    --color-text-primary: #1A1D23;
-    --color-text-secondary: #5B6270;
-    --color-text-disabled: #A0A5AD;
+    /* --- Brand Aliases --- */
+    --color-primary: #7C5CFC;
+    --color-primary-hover: #6D4AE8;
+    --color-primary-light: rgba(124, 92, 252, 0.16);
+
+    /* --- Semantic Status Badges & Flags --- */
+    --color-accent: #34D399;
+    --color-accent-light: rgba(52, 211, 153, 0.14);
+    --color-warning: #F5A524;
+    --color-warning-light: rgba(245, 165, 36, 0.14);
+    --color-danger: #F65A5A;
+    --color-danger-light: rgba(246, 90, 90, 0.14);
+    --color-info: #22D3EE;
+    --color-info-light: rgba(34, 211, 238, 0.14);
 
     /* --- Typography --- */
-    --font-heading: 'Manrope', 'Segoe UI', sans-serif;
-    --font-body: 'Inter', 'Segoe UI', sans-serif;
+    --font-heading: 'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    --font-body: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     --font-mono: 'JetBrains Mono', 'Courier New', monospace;
 }
 
 /* ===================================================================
-   Base Styles
+   Base Document Styles
    =================================================================== */
 
 * {
@@ -46,118 +53,175 @@
     padding: 0;
 }
 
-body {
-    font-family: var(--font-body);
+html, body {
     background-color: var(--color-bg);
     color: var(--color-text-primary);
+    font-family: var(--font-body);
     font-size: 15px;
-    line-height: 1.47;
+    line-height: 1.5;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    min-height: 100%;
 }
 
 h1, h2, h3, h4, h5, h6 {
     font-family: var(--font-heading);
     color: var(--color-text-primary);
+    letter-spacing: -0.015em;
 }
 
 h1 {
-    font-size: 32px;
-    line-height: 40px;
+    font-size: 30px;
+    line-height: 38px;
     font-weight: 700;
 }
 
 h2 {
-    font-size: 24px;
-    line-height: 32px;
+    font-size: 22px;
+    line-height: 30px;
     font-weight: 700;
 }
 
 h3 {
-    font-size: 18px;
-    line-height: 26px;
+    font-size: 17px;
+    line-height: 24px;
     font-weight: 600;
 }
 
 a {
-    color: var(--color-primary);
+    color: var(--color-aurora-end);
     text-decoration: none;
+    transition: color 0.15s ease;
 }
 
 a:hover {
-    color: var(--color-primary-hover);
+    color: #FFFFFF;
 }
 
 /* ===================================================================
-   Component Utilities
+   Aurora Signature Utilities
    =================================================================== */
 
-/* Card — used for panels, forms, content boxes */
-.card {
-    background: var(--color-surface);
-    border: 1px solid var(--color-border);
-    border-radius: 8px;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+/* Aurora text gradient */
+.text-aurora {
+    background: linear-gradient(135deg, var(--color-aurora-start), var(--color-aurora-end));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
 }
 
-/* Primary button */
+/* Ambient glow accent behind hero panels */
+.glow-aurora {
+    box-shadow: 0 0 50px rgba(124, 92, 252, 0.22);
+}
+
+/* Glassmorphic card container (for high-level sections and containers) */
+.card {
+    background: rgba(27, 24, 48, 0.75);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid var(--color-border);
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+    transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+                box-shadow 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+                border-color 0.2s ease;
+}
+
+.card-interactive {
+    cursor: pointer;
+}
+
+.card-interactive:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 30px rgba(124, 92, 252, 0.16);
+    border-color: rgba(196, 181, 253, 0.3);
+}
+
+/* Solid raised surface for data tables & dense inputs to protect legibility */
+.card-solid {
+    background: var(--color-surface-raised);
+    border: 1px solid var(--color-border);
+    border-radius: 12px;
+}
+
+/* ===================================================================
+   Buttons
+   =================================================================== */
+
 .btn-primary {
     display: inline-flex;
     align-items: center;
     justify-content: center;
     gap: 8px;
-    padding: 10px 20px;
-    background: var(--color-primary);
-    color: #fff;
+    padding: 8px 20px;
+    background: linear-gradient(135deg, var(--color-aurora-start), var(--color-aurora-end));
+    color: #FFFFFF;
     font-family: var(--font-body);
-    font-size: 15px;
-    font-weight: 500;
+    font-size: 14px;
+    font-weight: 600;
     border: none;
-    border-radius: 8px;
+    border-radius: 9999px;
     cursor: pointer;
-    transition: background 0.15s ease;
+    box-shadow: 0 4px 16px var(--color-aurora-glow);
+    transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+                box-shadow 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+                opacity 0.2s ease;
 }
 
 .btn-primary:hover {
-    background: var(--color-primary-hover);
+    transform: translateY(-1px);
+    box-shadow: 0 6px 24px rgba(124, 92, 252, 0.55);
 }
 
 .btn-primary:disabled {
-    opacity: 0.6;
+    opacity: 0.5;
     cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
 }
 
-/* Secondary button */
 .btn-secondary {
     display: inline-flex;
     align-items: center;
     justify-content: center;
     gap: 8px;
-    padding: 10px 20px;
-    background: transparent;
+    padding: 8px 18px;
+    background: rgba(36, 32, 64, 0.8);
     color: var(--color-text-primary);
     font-family: var(--font-body);
-    font-size: 15px;
+    font-size: 14px;
     font-weight: 500;
     border: 1px solid var(--color-border);
-    border-radius: 8px;
+    border-radius: 9999px;
     cursor: pointer;
-    transition: border-color 0.15s ease;
+    transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease, transform 0.15s ease;
 }
 
 .btn-secondary:hover {
-    border-color: var(--color-primary);
+    background: rgba(48, 43, 84, 0.95);
+    border-color: rgba(196, 181, 253, 0.35);
+    color: #FFFFFF;
+    transform: translateY(-1px);
 }
 
-/* Form inputs */
+.btn-secondary:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+}
+
+/* ===================================================================
+   Form Controls
+   =================================================================== */
+
 .input {
     display: block;
     width: 100%;
-    padding: 10px 14px;
+    padding: 9px 14px;
     font-family: var(--font-body);
-    font-size: 15px;
+    font-size: 14px;
     color: var(--color-text-primary);
-    background: var(--color-surface);
+    background: var(--color-surface-raised);
     border: 1px solid var(--color-border);
     border-radius: 8px;
     outline: none;
@@ -165,62 +229,103 @@ a:hover {
 }
 
 .input:focus {
-    border-color: var(--color-primary);
-    box-shadow: 0 0 0 2px var(--color-primary-light);
+    border-color: var(--color-aurora-start);
+    box-shadow: 0 0 0 3px rgba(124, 92, 252, 0.25);
 }
 
 .input::placeholder {
     color: var(--color-text-disabled);
 }
 
-/* Form labels */
+select.input option {
+    background: var(--color-surface-raised);
+    color: var(--color-text-primary);
+}
+
 .label {
     display: block;
     margin-bottom: 6px;
-    font-size: 13px;
+    font-size: 12px;
     font-weight: 600;
     color: var(--color-text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
 }
 
-/* Status badges */
+/* ===================================================================
+   Status Badges
+   =================================================================== */
+
 .badge {
     display: inline-flex;
     align-items: center;
-    gap: 4px;
-    padding: 2px 10px;
-    font-size: 12px;
+    gap: 5px;
+    padding: 3px 10px;
+    font-size: 11px;
     font-weight: 600;
-    border-radius: 4px;
+    border-radius: 9999px;
     text-transform: uppercase;
     letter-spacing: 0.04em;
+    line-height: 1;
 }
 
 .badge-success {
     background: var(--color-accent-light);
     color: var(--color-accent);
+    border: 1px solid rgba(52, 211, 153, 0.3);
 }
 
 .badge-warning {
     background: var(--color-warning-light);
     color: var(--color-warning);
+    border: 1px solid rgba(245, 165, 36, 0.3);
 }
 
 .badge-danger {
     background: var(--color-danger-light);
     color: var(--color-danger);
+    border: 1px solid rgba(246, 90, 90, 0.3);
 }
 
 .badge-info {
-    background: #E8EEF4;
+    background: var(--color-info-light);
     color: var(--color-info);
+    border: 1px solid rgba(34, 211, 238, 0.3);
 }
 
-/* Error alert */
+/* Slow opacity pulse for in-progress operations */
+@keyframes pulse-opacity {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.45; }
+}
+
+.badge-pulse {
+    animation: pulse-opacity 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* ===================================================================
+   Alerts & Notifications
+   =================================================================== */
+
 .alert-error {
-    padding: 10px 14px;
+    padding: 12px 16px;
     background: var(--color-danger-light);
     color: var(--color-danger);
+    border: 1px solid rgba(246, 90, 90, 0.3);
     border-radius: 8px;
     font-size: 14px;
     font-weight: 500;
+}
+
+/* ===================================================================
+   Motion Accessibility
+   =================================================================== */
+
+@media (prefers-reduced-motion: reduce) {
+    *, ::before, ::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
 }

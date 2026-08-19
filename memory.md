@@ -16,9 +16,9 @@
 
 ## Current Status
 
-- **Active Phase:** Phase 8 complete — ready for Phase 8.5 / Phase 9
+- **Active Phase:** Phase 8.5 complete — ready for Phase 9
 - **Last Updated:** 2026-08-19
-- **Overall Progress:** ~95% — Phases 0-8 complete. Dashboard polish, multi-type filtering, metrics overview, and CSV/JSON export functional.
+- **Overall Progress:** ~98% — Phases 0-8.5 complete. Aurora Obsidian design system, ambient 3D particle lighting, Lucide icons, and Framer Motion micro-interactions active across all views.
 
 ## Completed
 
@@ -56,15 +56,22 @@
   - Added multi-criteria filtering by Type, Status/Deviation, and Date with keyword search to `Dashboard.jsx`.
   - Added single and bulk export buttons to `Dashboard.jsx` and `DocumentDetail.jsx`.
   - Added `downloadExport` utility in `api.js` for authenticated file downloads.
+- [x] Phase 8.5: Modern 3D & Motion Visual Overhaul ("Aurora Obsidian"):
+  - Upgraded global styling to obsidian plum (`#12101B`) with electric violet/cyan aurora gradient accents.
+  - Implemented `AmbientAurora.jsx` canvas providing subtle ambient light and particle dust with `prefers-reduced-motion` static CSS fallback.
+  - Added Framer Motion staggered entrance animations for document table rows and hover-lift on metrics cards.
+  - Integrated Lucide icons across navigation, overview cards, action bars, and status flags.
+  - Maintained contrast ratios ≥ 4.5:1 on all text elements and opaque surfaces for dense data tables.
 
 ## In Progress
 
-- None — Phase 8 code-complete.
+- None — Phase 8.5 complete.
 
 ## Next Steps (in order)
 
-1. Optional: Proceed with Phase 8.5 ("Aurora Obsidian" 3D & motion overhaul) or directly to Phase 9 (Deployment & Demo Readiness).
-2. Seed sample documents and prepare final demo script (`DEMO_SCRIPT.md`).
+1. Proceed to Phase 9 (Deployment & Demo Readiness).
+2. Prepare final demo click-through script (`DEMO_SCRIPT.md`).
+
 
 
 ## Key Decisions & Why
@@ -419,5 +426,20 @@ pm run build).
 - Files touched: `backend/.../dto/document/DocumentListItemDto.java`, `backend/.../dto/document/DocumentExportDto.java`, `backend/.../service/ExportService.java`, `backend/.../service/DocumentService.java`, `backend/.../controller/DocumentController.java`, `backend/.../repository/AnomalyFlagRepository.java`, `backend/.../repository/ExtractionRepository.java`, `backend/.../repository/SummaryRepository.java`, `frontend/src/pages/Dashboard.jsx`, `frontend/src/pages/DocumentDetail.jsx`, `frontend/src/lib/api.js`, `memory.md`.
 - Tested/confirmed: `npm run build` built cleanly (33 modules, 0 errors). Backend `./mvnw clean compile` built with `BUILD SUCCESS` (55 source files).
 - Next session should: E2E verify dashboard filtering and export downloads in the browser, then proceed to Phase 8.5 / Phase 9.
+
+### Session 30 — 2026-08-19
+- Implemented Phase 8.5: Modern 3D & Motion Visual Overhaul ("Aurora Obsidian").
+- Updated `index.css` with dark obsidian-plum palette (`#12101B`), electric violet→cyan aurora gradients, glassmorphism card tokens, and dark-calibrated semantic status chips (contrast ratio ≥ 4.5:1).
+- Built `AmbientAurora.jsx` component providing canvas particle dust and ambient floating lighting with `prefers-reduced-motion` static CSS fallback.
+- Installed `motion` and `lucide-react`.
+- Upgraded `Login.jsx` and `Signup.jsx` with ambient aurora background, glassmorphic auth cards, and motion fade/lift.
+- Upgraded `Dashboard.jsx` with Lucide iconography, staggered entrance animation on document table rows, and hover-lift on overview metrics cards.
+- Upgraded `UploadDocument.jsx` with a custom dashed dropzone, hover glow, and file preview state.
+- Upgraded `TemplateManager.jsx` with tabbed category switcher, benchmark status chips, and Lucide icons.
+- Upgraded `DocumentDetail.jsx` and `AnomalyFlag.jsx` with dark-themed cards, crisp line item and contract tables, and calibrated deviation alert badges.
+- Files touched: `frontend/src/index.css`, `frontend/src/components/ui/AmbientAurora.jsx`, `frontend/src/components/AnomalyFlag.jsx`, `frontend/src/pages/Login.jsx`, `frontend/src/pages/Signup.jsx`, `frontend/src/pages/Dashboard.jsx`, `frontend/src/pages/UploadDocument.jsx`, `frontend/src/pages/TemplateManager.jsx`, `frontend/src/pages/DocumentDetail.jsx`, `frontend/package.json`, `memory.md`.
+- Tested/confirmed: Frontend built with `npm run build` (`✓ built in 735ms`, 2224 modules, 0 errors). Backend `./mvnw clean compile` verified with `BUILD SUCCESS` (55 source files).
+- Next session should: Start Phase 9 (Deployment & Demo Readiness).
+
 
 
