@@ -17,8 +17,8 @@
 ## Current Status
 
 - **Active Phase:** Phase 7 complete — ready for Phase 8
-- **Last Updated:** 2026-08-16
-- **Overall Progress:** ~90% — Phases 0-7 complete. Contract and Resume extraction implemented.
+- **Last Updated:** 2026-08-19
+- **Overall Progress:** ~92% — Phases 0-7 complete. Multi-type templates (Invoice, Contract, Resume) and template deletion supported.
 
 ## Completed
 
@@ -48,6 +48,8 @@
 - [x] Phase 6 (frontend, complete): Built `TemplateManager.jsx` to allow designating a document as a standard template. Added `AnomalyFlag.jsx` and updated `DocumentDetail.jsx` to display anomaly warnings.
 - [x] Phase 7 (backend, complete): Created `ContractExtractionDto`, `ResumeExtractionDto`, `ExtractContractPrompt`, `ExtractResumePrompt`. Extended `ExtractionService` with `extractContractFields` and `extractResumeFields`. Updated `DocumentProcessingService` dispatch to use a switch on document type.
 - [x] Phase 7 (frontend, complete): Removed `disabled` from Contract/Resume options in `UploadDocument.jsx`. Refactored `DocumentDetail.jsx` with `ExtractionFields`, `InvoiceFields`, `ContractFields`, `ResumeFields` component dispatchers. Backend and frontend build cleanly.
+- [x] Multi-type Template Management & Deletion: Added support for setting/deleting templates for Contracts and Resumes in addition to Invoices; added `DELETE /api/templates/{type}` and `GET /api/templates`; updated `TemplateManager.jsx` with tabs, active template preview, and template removal.
+
 
 ## In Progress
 
@@ -383,3 +385,15 @@ pm run build).
 - Tested/confirmed: `BUILD SUCCESS` for both backend (52 source files compiled) and frontend. All containers healthy.
 - Still untested: User needs to manually upload a Contract and Resume PDF and verify extracted fields render correctly in the UI.
 - Next session should: E2E verify Phase 7 (contract + resume upload and rendering), then start Phase 8.
+
+### Session 28 — 2026-08-19
+- Added template deletion capability and extended template management to Contract and Resume document types (previously restricted to Invoices only).
+- Added `DELETE /api/templates/{type}` and `GET /api/templates` to `TemplateController.java`, scoped by authenticated user's workspace.
+- Refactored `TemplateController.java` to inject `UserRepository` and directly query workspace ID from the user entity rather than relying on existing documents.
+- Added `findByWorkspaceId` to `TemplateRepository.java`.
+- Enhanced `AnomalyCheckPrompt.java` with explicit anomaly detection rules for Invoices, Contracts, and Resumes.
+- Completely redesigned `TemplateManager.jsx` with tabbed navigation across Invoices, Contracts, and Resumes, active template preview/link, "Remove Template" deletion action, and type-filtered dropdown selection.
+- Files touched: `backend/src/main/java/com/docket/controller/TemplateController.java`, `backend/src/main/java/com/docket/repository/TemplateRepository.java`, `backend/src/main/java/com/docket/prompt/AnomalyCheckPrompt.java`, `frontend/src/pages/TemplateManager.jsx`, `memory.md`.
+- Tested/confirmed: Backend compiled with `BUILD SUCCESS` (52 source files). Frontend built cleanly with `npm run build` (33 modules, 0 errors).
+- Next session should: E2E test setting and deleting Contract and Resume templates in the browser, and proceed to Phase 8.
+

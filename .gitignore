@@ -23,3 +23,5 @@ Thumbs.db
 skills-lock.json
 .agents/
 .skills/
+
+uploads/*
