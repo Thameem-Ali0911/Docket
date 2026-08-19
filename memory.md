@@ -16,9 +16,9 @@
 
 ## Current Status
 
-- **Active Phase:** Phase 7 complete — ready for Phase 8
+- **Active Phase:** Phase 8 complete — ready for Phase 8.5 / Phase 9
 - **Last Updated:** 2026-08-19
-- **Overall Progress:** ~92% — Phases 0-7 complete. Multi-type templates (Invoice, Contract, Resume) and template deletion supported.
+- **Overall Progress:** ~95% — Phases 0-8 complete. Dashboard polish, multi-type filtering, metrics overview, and CSV/JSON export functional.
 
 ## Completed
 
@@ -48,18 +48,24 @@
 - [x] Phase 6 (frontend, complete): Built `TemplateManager.jsx` to allow designating a document as a standard template. Added `AnomalyFlag.jsx` and updated `DocumentDetail.jsx` to display anomaly warnings.
 - [x] Phase 7 (backend, complete): Created `ContractExtractionDto`, `ResumeExtractionDto`, `ExtractContractPrompt`, `ExtractResumePrompt`. Extended `ExtractionService` with `extractContractFields` and `extractResumeFields`. Updated `DocumentProcessingService` dispatch to use a switch on document type.
 - [x] Phase 7 (frontend, complete): Removed `disabled` from Contract/Resume options in `UploadDocument.jsx`. Refactored `DocumentDetail.jsx` with `ExtractionFields`, `InvoiceFields`, `ContractFields`, `ResumeFields` component dispatchers. Backend and frontend build cleanly.
-- [x] Multi-type Template Management & Deletion: Added support for setting/deleting templates for Contracts and Resumes in addition to Invoices; added `DELETE /api/templates/{type}` and `GET /api/templates`; updated `TemplateManager.jsx` with tabs, active template preview, and template removal.
-
+- [x] Phase 8: Dashboard Polish & Export:
+  - Added `DocumentListItemDto` and `DocumentExportDto` records.
+  - Implemented `ExportService.java` for CSV and JSON serialization of document and workspace intelligence.
+  - Added `GET /api/documents/{id}/export?format={json|csv}` and `GET /api/documents/export?format={json|csv}` to `DocumentController.java`.
+  - Added overview metrics cards (Total, Processed, Flagged, Pending, Failed) to `Dashboard.jsx`.
+  - Added multi-criteria filtering by Type, Status/Deviation, and Date with keyword search to `Dashboard.jsx`.
+  - Added single and bulk export buttons to `Dashboard.jsx` and `DocumentDetail.jsx`.
+  - Added `downloadExport` utility in `api.js` for authenticated file downloads.
 
 ## In Progress
 
-- None — Phase 7 code-complete. Awaiting manual E2E verification (upload a contract and a resume, confirm extracted fields render correctly).
+- None — Phase 8 code-complete.
 
 ## Next Steps (in order)
 
-1. User to log in (token may have expired — clear localStorage if needed), upload a Contract PDF, verify extracted fields (title, parties, dates, governing law, value) render on the detail page.
-2. Upload a Resume PDF, verify candidate name, email, phone, skills and experience table render correctly.
-3. Once E2E confirmed, start Phase 8 (Export functionality).
+1. Optional: Proceed with Phase 8.5 ("Aurora Obsidian" 3D & motion overhaul) or directly to Phase 9 (Deployment & Demo Readiness).
+2. Seed sample documents and prepare final demo script (`DEMO_SCRIPT.md`).
+
 
 ## Key Decisions & Why
 
@@ -396,4 +402,22 @@ pm run build).
 - Files touched: `backend/src/main/java/com/docket/controller/TemplateController.java`, `backend/src/main/java/com/docket/repository/TemplateRepository.java`, `backend/src/main/java/com/docket/prompt/AnomalyCheckPrompt.java`, `frontend/src/pages/TemplateManager.jsx`, `memory.md`.
 - Tested/confirmed: Backend compiled with `BUILD SUCCESS` (52 source files). Frontend built cleanly with `npm run build` (33 modules, 0 errors).
 - Next session should: E2E test setting and deleting Contract and Resume templates in the browser, and proceed to Phase 8.
+
+### Session 29 — 2026-08-19
+- Implemented Phase 8: Dashboard Polish & Export.
+- Created `DocumentListItemDto.java` and `DocumentExportDto.java` DTO records.
+- Implemented `ExportService.java` to serialize document and workspace intelligence (metadata, extracted fields, plain-English summary, anomaly flags) into RFC-compliant CSV and pretty-printed JSON.
+- Enhanced `DocumentService.java` with `getEnrichedDocumentsForWorkspace` (aggregating anomaly counts per document) and export retrieval methods.
+- Added `GET /api/documents/{id}/export?format={json|csv}` and `GET /api/documents/export?format={json|csv}` in `DocumentController.java`.
+- Enhanced `Dashboard.jsx`:
+  - Added 5 top overview metrics cards (Total, Processed, Flagged, Pending, Failed).
+  - Implemented multi-criteria filtering: Document Type (Invoices, Contracts, Resumes), Status/Deviations (Flagged, Clean, Pending, Failed), Date range (Today, 7 days, 30 days), and real-time search.
+  - Added visual anomaly badges (`⚠️ N Deviations` vs `✅ Standard`) in the table.
+  - Added bulk export actions (CSV / JSON) and per-row quick export actions.
+- Enhanced `DocumentDetail.jsx` with single-document "Export CSV" and "Export JSON" action buttons.
+- Added `downloadExport` utility in `api.js` for authenticated file downloads.
+- Files touched: `backend/.../dto/document/DocumentListItemDto.java`, `backend/.../dto/document/DocumentExportDto.java`, `backend/.../service/ExportService.java`, `backend/.../service/DocumentService.java`, `backend/.../controller/DocumentController.java`, `backend/.../repository/AnomalyFlagRepository.java`, `backend/.../repository/ExtractionRepository.java`, `backend/.../repository/SummaryRepository.java`, `frontend/src/pages/Dashboard.jsx`, `frontend/src/pages/DocumentDetail.jsx`, `frontend/src/lib/api.js`, `memory.md`.
+- Tested/confirmed: `npm run build` built cleanly (33 modules, 0 errors). Backend `./mvnw clean compile` built with `BUILD SUCCESS` (55 source files).
+- Next session should: E2E verify dashboard filtering and export downloads in the browser, then proceed to Phase 8.5 / Phase 9.
+
 

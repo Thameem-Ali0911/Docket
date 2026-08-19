@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { apiFetch, clearToken } from '../lib/api';
+import { apiFetch, clearToken, downloadExport } from '../lib/api';
 import AnomalyFlag from '../components/AnomalyFlag';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
@@ -71,6 +71,14 @@ export default function DocumentDetail() {
             .finally(() => setLoading(false));
     }, [id, navigate]);
 
+    async function handleExport(format) {
+        try {
+            await downloadExport(`/api/documents/${id}/export?format=${format}`, `document-${id}-export.${format}`);
+        } catch (err) {
+            alert(`Export failed: ${err.message}`);
+        }
+    }
+
     if (loading) {
         return (
             <div className="min-h-screen flex items-center justify-center"
@@ -85,7 +93,8 @@ export default function DocumentDetail() {
             <nav className="card flex items-center justify-between px-6 py-3"
                  style={{ borderRadius: 0, borderTop: 'none', borderLeft: 'none', borderRight: 'none' }}>
                 <div className="flex items-center gap-3">
-                    <h2 className="text-xl font-bold"
+                    <h2 className="text-xl font-bold cursor-pointer"
+                        onClick={() => navigate('/dashboard')}
                         style={{ fontFamily: 'var(--font-heading)', color: 'var(--color-primary)' }}>
                         Docket
                     </h2>
@@ -101,21 +110,40 @@ export default function DocumentDetail() {
                     <div className="alert-error">{error}</div>
                 ) : (
                     <>
-                        <div className="flex items-center justify-between mb-8">
+                        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
                             <div>
                                 <h1>{document?.type} — {document?.fileUrl?.split('/').pop()}</h1>
                                 <p style={{ color: 'var(--color-text-secondary)', fontSize: '14px', marginTop: '4px' }}>
                                     Uploaded {document?.uploadedAt ? new Date(document.uploadedAt).toLocaleString() : '—'}
                                 </p>
                             </div>
-                            <span className={`badge ${
-                                document?.status === 'PENDING' ? 'badge-warning'
-                                    : document?.status === 'PROCESSED' ? 'badge-success'
-                                    : 'badge-danger'
-                            }`}>
-                                {document?.status}
-                            </span>
+                            <div className="flex items-center gap-3">
+                                <button
+                                    onClick={() => handleExport('csv')}
+                                    className="btn-secondary"
+                                    style={{ padding: '6px 12px', fontSize: '13px' }}
+                                    title="Export this document as CSV"
+                                >
+                                    📥 Export CSV
+                                </button>
+                                <button
+                                    onClick={() => handleExport('json')}
+                                    className="btn-secondary"
+                                    style={{ padding: '6px 12px', fontSize: '13px' }}
+                                    title="Export this document as JSON"
+                                >
+                                    📥 Export JSON
+                                </button>
+                                <span className={`badge ${
+                                    document?.status === 'PENDING' ? 'badge-warning'
+                                        : document?.status === 'PROCESSED' ? 'badge-success'
+                                        : 'badge-danger'
+                                }`}>
+                                    {document?.status}
+                                </span>
+                            </div>
                         </div>
+
 
                         <div className="grid gap-6" style={{ gridTemplateColumns: '1fr 1fr' }}>
                             {/* File preview */}

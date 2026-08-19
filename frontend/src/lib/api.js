@@ -88,3 +88,49 @@ export async function apiFetch(path, options = {}) {
 
     return data;
 }
+
+/**
+ * Downloads a file from an authenticated endpoint as a browser file attachment.
+ *
+ * @param {string} path — API path (e.g., "/api/documents/export?format=csv")
+ * @param {string} defaultFilename — default filename if Content-Disposition header is not present
+ */
+export async function downloadExport(path, defaultFilename = 'docket-export.json') {
+    const token = getToken();
+    const headers = {};
+
+    if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+    }
+
+    const response = await fetch(`${API_BASE_URL}${path}`, { headers });
+
+    if (response.status === 401 || response.status === 403) {
+        clearToken();
+        window.location.href = '/login';
+        throw new Error(`Authentication failed (${response.status}). Please log in again.`);
+    }
+
+    if (!response.ok) {
+        throw new Error(`Export failed with status ${response.status}`);
+    }
+
+    const disposition = response.headers.get('Content-Disposition');
+    let filename = defaultFilename;
+    if (disposition && disposition.includes('filename=')) {
+        const match = disposition.match(/filename="?([^"]+)"?/);
+        if (match && match[1]) {
+            filename = match[1];
+        }
+    }
+
+    const blob = await response.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    window.URL.revokeObjectURL(url);
+}
