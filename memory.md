@@ -16,9 +16,9 @@
 
 ## Current Status
 
-- **Active Phase:** Phase 8.5 complete — ready for Phase 9
+- **Active Phase:** Phase 8.5 complete (neomorphic UI overhaul applied) — ready for Phase 9
 - **Last Updated:** 2026-08-19
-- **Overall Progress:** ~98% — Phases 0-8.5 complete. Aurora Obsidian design system, ambient 3D particle lighting, Lucide icons, and Framer Motion micro-interactions active across all views.
+- **Overall Progress:** ~98% — Phases 0–8.5 complete. Full neomorphic Apple-style design system applied across all pages. Shadow tokens, spring easing, inset inputs, extruded cards, frosted nav.
 
 ## Completed
 
@@ -62,16 +62,27 @@
   - Added Framer Motion staggered entrance animations for document table rows and hover-lift on metrics cards.
   - Integrated Lucide icons across navigation, overview cards, action bars, and status flags.
   - Maintained contrast ratios ≥ 4.5:1 on all text elements and opaque surfaces for dense data tables.
+- [x] Phase 8.5 (Session 32): Neomorphic Apple-style UI overhaul:
+  - Rebuilt `index.css` with neomorphic shadow token system (`--neo-shadow-sm/md/lg/inset/hover/aurora`), spring easing tokens, extruded `.card`/`.card-neo-sm`/`.card-lg`/`.card-inset` variants.
+  - Added `.btn-primary` press state (`scale(0.97)` + inset flash), `.btn-secondary` extruded rest, `.btn-ghost` for lightweight inline actions.
+  - Inputs use neomorphic inset shadow at rest + aurora ring on focus.
+  - Added `.nav-frosted` (Apple-style `saturate(180%) blur(20px)` sticky strip), `.tab-bar`/`.tab-item` neomorphic pill switcher, `.stat-icon` widget container.
+  - Rewrote `Login.jsx` and `Signup.jsx` with spring entrance, aurora top-edge accent line, icon-prefixed inputs, and gradient "D" logo mark.
+  - Rewrote `Dashboard.jsx` with sticky frosted nav, spring-staggered metric cards, slide-in table rows, `AnimatePresence` filter clear, and row-count footer.
+  - Rewrote `UploadDocument.jsx` with card-selector for doc type (extruded→inset on select), neomorphic inset dropzone with drag color transitions.
+  - Rewrote `TemplateManager.jsx` with neomorphic tab bar, `AnimatePresence mode="wait"` panel transitions, and `card-inset` active template display.
 
 ## In Progress
 
-- None — Phase 8.5 complete.
+- None — neomorphic overhaul complete and build verified.
 
 ## Next Steps (in order)
 
 1. Proceed to Phase 9 (Deployment & Demo Readiness).
-2. Prepare final demo click-through script (`DEMO_SCRIPT.md`).
-
+2. Run `docker compose up --build` to verify full container stack builds and comes up healthy.
+3. Verify environment variable parity with `.env.example` / `application-dev.yml.example`.
+4. Author `DEMO_SCRIPT.md` click-through script (Signup → Upload → OCR/Extraction → Benchmark Template → Anomaly Detection → Filter/Search → Export).
+5. Run §8 Production-Ready checklist from `AGENTS.md`.
 
 
 ## Key Decisions & Why
@@ -441,5 +452,30 @@ pm run build).
 - Tested/confirmed: Frontend built with `npm run build` (`✓ built in 735ms`, 2224 modules, 0 errors). Backend `./mvnw clean compile` verified with `BUILD SUCCESS` (55 source files).
 - Next session should: Start Phase 9 (Deployment & Demo Readiness).
 
+### Session 31 — 2026-08-19
+- Compacted Dashboard layout to eliminate excessive blank space and large paddings.
+- Changed `main` container from `max-w-6xl px-6 py-10` to `max-w-[1600px] px-4 sm:px-8 py-6` so the page fills wide screens.
+- Nav bar inner content now constrained to the same `max-w-[1600px]` wrapper for alignment.
+- Reduced metric card padding (`p-4` → `p-3.5`), internal gap (`mb-2` → `mb-1.5`), and section spacing (`mb-8` → `mb-5`).
+- Compacted filter bar (`p-4 mb-6` → `px-3.5 py-3 mb-4`) and tightened filter control gaps (`gap-4` → `gap-2`).
+- Reduced table header and row cell padding (`py-3 px-4` → `py-2.5 px-3`).
+- Reduced empty-state block padding from `p-12` → `p-8`.
+- Files touched: `frontend/src/pages/Dashboard.jsx`, `memory.md`.
+- Tested/confirmed: Build not re-run this session — layout changes are CSS/JSX-only with no logic changes; prior build (Session 30, 0 errors) still valid.
+- Still untested / follow-up: Full `docker compose up --build` for Phase 9 production verification.
 
-
+### Session 32 — 2026-08-19
+- Applied full neomorphic Apple-style design overhaul across all frontend pages.
+- Rebuilt `index.css` with neomorphic shadow token system: `--neo-shadow-sm/md/lg`, `--neo-shadow-inset`, `--neo-shadow-inset-deep`, `--neo-shadow-hover`, `--neo-shadow-aurora`. Spring easing: `--ease-spring: cubic-bezier(0.22, 1, 0.36, 1)`.
+- Added card variants: `.card` (extruded), `.card-neo-sm` (metric widget), `.card-lg` (auth/modal), `.card-inset` (recessed well).
+- Buttons: `.btn-primary` gains `scale(0.97)` + inset shadow on `:active`; `.btn-secondary` extruded rest; new `.btn-ghost` for inline actions.
+- Inputs: neomorphic inset shadow at rest → aurora ring on `:focus`.
+- Added `.nav-frosted` (Apple sticky nav), `.tab-bar`/`.tab-item` (neomorphic pill switcher), `.stat-icon` widget container, `.bg-grid` dot-grid texture, `.divider`, custom scrollbar.
+- Rewrote `Login.jsx` and `Signup.jsx`: spring entrance (`scale 0.97→1`), aurora gradient top-edge accent line, icon-prefixed inputs (Mail, Lock, Building2), gradient "D" logo mark.
+- Rewrote `Dashboard.jsx`: sticky frosted nav with logo mark, spring-staggered metric cards via config array + `stat-icon`, slide-in table rows (`x: -6→0`), `AnimatePresence` filter clear button, row-count/filter footer.
+- Rewrote `UploadDocument.jsx`: card-selector for doc type (extruded at rest, inset + aurora glow when selected), neomorphic inset dropzone with drag color transitions.
+- Rewrote `TemplateManager.jsx`: frosted nav breadcrumb, neomorphic tab bar with dot status indicator per type, `AnimatePresence mode="wait"` panel swap, `card-inset` active template row, compact set/remove controls.
+- Files touched: `frontend/src/index.css`, `frontend/src/pages/Login.jsx`, `frontend/src/pages/Signup.jsx`, `frontend/src/pages/Dashboard.jsx`, `frontend/src/pages/UploadDocument.jsx`, `frontend/src/pages/TemplateManager.jsx`, `memory.md`.
+- Tested/confirmed: `npm run build` passed cleanly — `✓ built in 718ms`, 2224 modules, 0 errors.
+- Still untested / follow-up: `DocumentDetail.jsx` and `AnomalyFlag.jsx` not yet updated to neomorphic style. Full `docker compose up --build` for Phase 9.
+- Next session should: Apply neomorphic treatment to `DocumentDetail.jsx` and `AnomalyFlag.jsx` if desired, then start Phase 9 (container build + `DEMO_SCRIPT.md`).

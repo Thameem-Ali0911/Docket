@@ -1,8 +1,8 @@
 @import "tailwindcss";
 
 /* ===================================================================
-   Docket Design System — "Aurora Obsidian" (v2 Theme Tokens)
-   Source of truth: design.md §8
+   Docket Design System — "Aurora Obsidian Neomorphic" (v3 Theme)
+   Source of truth: design.md §8 + neomorphic shadow layer
    =================================================================== */
 
 @theme {
@@ -10,37 +10,68 @@
     --color-bg: #12101B;
     --color-surface: #1B1830;
     --color-surface-raised: #242040;
-    --color-border: rgba(196, 181, 253, 0.14);
+    --color-border: rgba(196, 181, 253, 0.10);
+    --color-border-hover: rgba(196, 181, 253, 0.22);
 
     /* --- Text & Content (Contrast >= 4.5:1 on obsidian base) --- */
     --color-text-primary: #F3F1FA;
     --color-text-secondary: #A8A2C4;
-    --color-text-disabled: #645E82;
+    --color-text-disabled: #4E4A68;
 
     /* --- Aurora Signature Gradient Tokens --- */
     --color-aurora-start: #7C5CFC;
     --color-aurora-end: #22D3EE;
-    --color-aurora-glow: rgba(124, 92, 252, 0.35);
+    --color-aurora-glow: rgba(124, 92, 252, 0.30);
+    --color-aurora-glow-strong: rgba(124, 92, 252, 0.50);
 
     /* --- Brand Aliases --- */
     --color-primary: #7C5CFC;
     --color-primary-hover: #6D4AE8;
-    --color-primary-light: rgba(124, 92, 252, 0.16);
+    --color-primary-light: rgba(124, 92, 252, 0.14);
 
     /* --- Semantic Status Badges & Flags --- */
     --color-accent: #34D399;
-    --color-accent-light: rgba(52, 211, 153, 0.14);
+    --color-accent-light: rgba(52, 211, 153, 0.12);
     --color-warning: #F5A524;
-    --color-warning-light: rgba(245, 165, 36, 0.14);
+    --color-warning-light: rgba(245, 165, 36, 0.12);
     --color-danger: #F65A5A;
-    --color-danger-light: rgba(246, 90, 90, 0.14);
+    --color-danger-light: rgba(246, 90, 90, 0.12);
     --color-info: #22D3EE;
-    --color-info-light: rgba(34, 211, 238, 0.14);
+    --color-info-light: rgba(34, 211, 238, 0.12);
+
+    /* --- Neomorphic Shadow Tokens --- */
+    --neo-shadow-sm:
+        5px 5px 12px rgba(0, 0, 0, 0.45),
+        -3px -3px 8px rgba(196, 181, 253, 0.04);
+    --neo-shadow-md:
+        8px 8px 20px rgba(0, 0, 0, 0.55),
+        -5px -5px 14px rgba(196, 181, 253, 0.05);
+    --neo-shadow-lg:
+        12px 12px 30px rgba(0, 0, 0, 0.60),
+        -6px -6px 18px rgba(196, 181, 253, 0.05);
+    --neo-shadow-inset:
+        inset 3px 3px 8px rgba(0, 0, 0, 0.50),
+        inset -2px -2px 6px rgba(196, 181, 253, 0.04);
+    --neo-shadow-inset-deep:
+        inset 4px 4px 12px rgba(0, 0, 0, 0.65),
+        inset -3px -3px 8px rgba(196, 181, 253, 0.04);
+    --neo-shadow-hover:
+        10px 10px 28px rgba(0, 0, 0, 0.60),
+        -5px -5px 16px rgba(196, 181, 253, 0.06),
+        0 0 24px rgba(124, 92, 252, 0.20);
+    --neo-shadow-aurora:
+        8px 8px 20px rgba(0, 0, 0, 0.55),
+        -5px -5px 14px rgba(196, 181, 253, 0.05),
+        0 0 40px rgba(124, 92, 252, 0.18);
+
+    /* --- Spring Easing --- */
+    --ease-spring: cubic-bezier(0.22, 1, 0.36, 1);
+    --ease-snap: cubic-bezier(0.16, 1, 0.3, 1);
 
     /* --- Typography --- */
-    --font-heading: 'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    --font-body: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    --font-mono: 'JetBrains Mono', 'Courier New', monospace;
+    --font-heading: 'Manrope', -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', sans-serif;
+    --font-body: 'Inter', -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', sans-serif;
+    --font-mono: 'JetBrains Mono', 'SF Mono', 'Courier New', monospace;
 }
 
 /* ===================================================================
@@ -58,7 +89,7 @@ html, body {
     color: var(--color-text-primary);
     font-family: var(--font-body);
     font-size: 15px;
-    line-height: 1.5;
+    line-height: 1.55;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     min-height: 100%;
@@ -67,81 +98,112 @@ html, body {
 h1, h2, h3, h4, h5, h6 {
     font-family: var(--font-heading);
     color: var(--color-text-primary);
-    letter-spacing: -0.015em;
+    letter-spacing: -0.02em;
 }
 
-h1 {
-    font-size: 30px;
-    line-height: 38px;
-    font-weight: 700;
-}
-
-h2 {
-    font-size: 22px;
-    line-height: 30px;
-    font-weight: 700;
-}
-
-h3 {
-    font-size: 17px;
-    line-height: 24px;
-    font-weight: 600;
-}
+h1 { font-size: 30px; line-height: 38px; font-weight: 800; }
+h2 { font-size: 22px; line-height: 30px; font-weight: 700; }
+h3 { font-size: 17px; line-height: 24px; font-weight: 600; }
 
 a {
     color: var(--color-aurora-end);
     text-decoration: none;
     transition: color 0.15s ease;
 }
-
-a:hover {
-    color: #FFFFFF;
-}
+a:hover { color: #FFFFFF; }
 
 /* ===================================================================
    Aurora Signature Utilities
    =================================================================== */
 
-/* Aurora text gradient */
 .text-aurora {
     background: linear-gradient(135deg, var(--color-aurora-start), var(--color-aurora-end));
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
+    background-clip: text;
 }
 
-/* Ambient glow accent behind hero panels */
 .glow-aurora {
     box-shadow: 0 0 50px rgba(124, 92, 252, 0.22);
 }
 
-/* Glassmorphic card container (for high-level sections and containers) */
-.card {
-    background: rgba(27, 24, 48, 0.75);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
-    border: 1px solid var(--color-border);
-    border-radius: 12px;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
-    transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1),
-                box-shadow 0.2s cubic-bezier(0.16, 1, 0.3, 1),
-                border-color 0.2s ease;
+/* Subtle dot-grid texture for auth backgrounds */
+.bg-grid {
+    background-image: radial-gradient(rgba(196, 181, 253, 0.07) 1px, transparent 1px);
+    background-size: 28px 28px;
 }
 
+/* ===================================================================
+   Neomorphic Card System
+   =================================================================== */
+
+/* Primary extruded card — neomorphic depth */
+.card {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: 16px;
+    box-shadow: var(--neo-shadow-md);
+    transition:
+        transform 0.25s var(--ease-spring),
+        box-shadow 0.25s var(--ease-spring),
+        border-color 0.2s ease;
+}
+
+/* Interactive card — lift on hover */
 .card-interactive {
     cursor: pointer;
 }
-
 .card-interactive:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 30px rgba(124, 92, 252, 0.16);
-    border-color: rgba(196, 181, 253, 0.3);
+    transform: translateY(-3px) scale(1.005);
+    box-shadow: var(--neo-shadow-hover);
+    border-color: var(--color-border-hover);
+}
+.card-interactive:active {
+    transform: translateY(0) scale(0.99);
+    box-shadow: var(--neo-shadow-inset);
 }
 
-/* Solid raised surface for data tables & dense inputs to protect legibility */
+/* Small neomorphic widget (metric cards) */
+.card-neo-sm {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: 14px;
+    box-shadow: var(--neo-shadow-sm);
+    transition:
+        transform 0.22s var(--ease-spring),
+        box-shadow 0.22s var(--ease-spring);
+}
+.card-neo-sm:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--neo-shadow-hover);
+    border-color: var(--color-border-hover);
+}
+.card-neo-sm:active {
+    transform: translateY(0);
+    box-shadow: var(--neo-shadow-inset);
+}
+
+/* Large elevated card (auth, modals) */
+.card-lg {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: 20px;
+    box-shadow: var(--neo-shadow-aurora);
+}
+
+/* Recessed/inset well surface */
+.card-inset {
+    background: var(--color-bg);
+    border: 1px solid var(--color-border);
+    border-radius: 12px;
+    box-shadow: var(--neo-shadow-inset);
+}
+
+/* Solid raised surface for dense data tables */
 .card-solid {
     background: var(--color-surface-raised);
     border: 1px solid var(--color-border);
-    border-radius: 12px;
+    border-radius: 14px;
 }
 
 /* ===================================================================
@@ -152,29 +214,42 @@ a:hover {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 8px;
-    padding: 8px 20px;
-    background: linear-gradient(135deg, var(--color-aurora-start), var(--color-aurora-end));
+    gap: 7px;
+    padding: 9px 22px;
+    background: linear-gradient(135deg, var(--color-aurora-start) 0%, #5B8DF8 50%, var(--color-aurora-end) 100%);
+    background-size: 200% 200%;
     color: #FFFFFF;
     font-family: var(--font-body);
     font-size: 14px;
     font-weight: 600;
+    letter-spacing: -0.01em;
     border: none;
     border-radius: 9999px;
     cursor: pointer;
-    box-shadow: 0 4px 16px var(--color-aurora-glow);
-    transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1),
-                box-shadow 0.2s cubic-bezier(0.16, 1, 0.3, 1),
-                opacity 0.2s ease;
+    box-shadow:
+        0 4px 18px var(--color-aurora-glow),
+        0 1px 0 rgba(255, 255, 255, 0.12) inset;
+    transition:
+        transform 0.18s var(--ease-spring),
+        box-shadow 0.18s var(--ease-spring),
+        background-position 0.4s ease;
+    background-position: 0% 50%;
 }
-
 .btn-primary:hover {
     transform: translateY(-1px);
-    box-shadow: 0 6px 24px rgba(124, 92, 252, 0.55);
+    box-shadow:
+        0 8px 28px var(--color-aurora-glow-strong),
+        0 1px 0 rgba(255, 255, 255, 0.14) inset;
+    background-position: 100% 50%;
 }
-
+.btn-primary:active {
+    transform: scale(0.97) translateY(0);
+    box-shadow:
+        0 2px 8px var(--color-aurora-glow),
+        inset 0 2px 6px rgba(0, 0, 0, 0.20);
+}
 .btn-primary:disabled {
-    opacity: 0.5;
+    opacity: 0.45;
     cursor: not-allowed;
     transform: none;
     box-shadow: none;
@@ -184,59 +259,95 @@ a:hover {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 8px;
+    gap: 7px;
     padding: 8px 18px;
-    background: rgba(36, 32, 64, 0.8);
+    background: var(--color-surface-raised);
     color: var(--color-text-primary);
     font-family: var(--font-body);
     font-size: 14px;
     font-weight: 500;
+    letter-spacing: -0.01em;
     border: 1px solid var(--color-border);
     border-radius: 9999px;
     cursor: pointer;
-    transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease, transform 0.15s ease;
+    box-shadow: var(--neo-shadow-sm);
+    transition:
+        background 0.15s ease,
+        border-color 0.15s ease,
+        color 0.15s ease,
+        transform 0.18s var(--ease-spring),
+        box-shadow 0.18s var(--ease-spring);
 }
-
 .btn-secondary:hover {
-    background: rgba(48, 43, 84, 0.95);
-    border-color: rgba(196, 181, 253, 0.35);
+    background: #2E2A50;
+    border-color: var(--color-border-hover);
     color: #FFFFFF;
     transform: translateY(-1px);
+    box-shadow: var(--neo-shadow-md);
 }
-
+.btn-secondary:active {
+    transform: scale(0.97);
+    box-shadow: var(--neo-shadow-inset);
+}
 .btn-secondary:disabled {
-    opacity: 0.5;
+    opacity: 0.45;
     cursor: not-allowed;
     transform: none;
+    box-shadow: none;
+}
+
+/* Ghost/text button for inline actions */
+.btn-ghost {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 10px;
+    background: transparent;
+    color: var(--color-text-secondary);
+    font-size: 13px;
+    font-weight: 500;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: color 0.15s ease, background 0.15s ease;
+}
+.btn-ghost:hover {
+    color: var(--color-text-primary);
+    background: rgba(196, 181, 253, 0.07);
 }
 
 /* ===================================================================
-   Form Controls
+   Form Controls — Neomorphic Inset
    =================================================================== */
 
 .input {
     display: block;
     width: 100%;
-    padding: 9px 14px;
+    padding: 10px 14px;
     font-family: var(--font-body);
     font-size: 14px;
     color: var(--color-text-primary);
-    background: var(--color-surface-raised);
+    background: var(--color-bg);
     border: 1px solid var(--color-border);
-    border-radius: 8px;
+    border-radius: 10px;
     outline: none;
-    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    box-shadow: var(--neo-shadow-inset);
+    transition:
+        border-color 0.18s ease,
+        box-shadow 0.18s ease;
 }
-
 .input:focus {
-    border-color: var(--color-aurora-start);
-    box-shadow: 0 0 0 3px rgba(124, 92, 252, 0.25);
+    border-color: rgba(124, 92, 252, 0.60);
+    box-shadow:
+        var(--neo-shadow-inset),
+        0 0 0 3px rgba(124, 92, 252, 0.18);
 }
-
+.input:hover:not(:focus) {
+    border-color: var(--color-border-hover);
+}
 .input::placeholder {
     color: var(--color-text-disabled);
 }
-
 select.input option {
     background: var(--color-surface-raised);
     color: var(--color-text-primary);
@@ -244,12 +355,12 @@ select.input option {
 
 .label {
     display: block;
-    margin-bottom: 6px;
-    font-size: 12px;
-    font-weight: 600;
+    margin-bottom: 7px;
+    font-size: 11px;
+    font-weight: 700;
     color: var(--color-text-secondary);
     text-transform: uppercase;
-    letter-spacing: 0.04em;
+    letter-spacing: 0.06em;
 }
 
 /* ===================================================================
@@ -259,46 +370,42 @@ select.input option {
 .badge {
     display: inline-flex;
     align-items: center;
-    gap: 5px;
-    padding: 3px 10px;
-    font-size: 11px;
-    font-weight: 600;
+    gap: 4px;
+    padding: 3px 9px;
+    font-size: 10.5px;
+    font-weight: 700;
     border-radius: 9999px;
     text-transform: uppercase;
-    letter-spacing: 0.04em;
+    letter-spacing: 0.05em;
     line-height: 1;
+    box-shadow: var(--neo-shadow-sm);
 }
 
 .badge-success {
     background: var(--color-accent-light);
     color: var(--color-accent);
-    border: 1px solid rgba(52, 211, 153, 0.3);
+    border: 1px solid rgba(52, 211, 153, 0.25);
 }
-
 .badge-warning {
     background: var(--color-warning-light);
     color: var(--color-warning);
-    border: 1px solid rgba(245, 165, 36, 0.3);
+    border: 1px solid rgba(245, 165, 36, 0.25);
 }
-
 .badge-danger {
     background: var(--color-danger-light);
     color: var(--color-danger);
-    border: 1px solid rgba(246, 90, 90, 0.3);
+    border: 1px solid rgba(246, 90, 90, 0.25);
 }
-
 .badge-info {
     background: var(--color-info-light);
     color: var(--color-info);
-    border: 1px solid rgba(34, 211, 238, 0.3);
+    border: 1px solid rgba(34, 211, 238, 0.25);
 }
 
-/* Slow opacity pulse for in-progress operations */
 @keyframes pulse-opacity {
     0%, 100% { opacity: 1; }
-    50% { opacity: 0.45; }
+    50% { opacity: 0.4; }
 }
-
 .badge-pulse {
     animation: pulse-opacity 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
@@ -308,13 +415,105 @@ select.input option {
    =================================================================== */
 
 .alert-error {
-    padding: 12px 16px;
+    padding: 11px 15px;
     background: var(--color-danger-light);
     color: var(--color-danger);
-    border: 1px solid rgba(246, 90, 90, 0.3);
-    border-radius: 8px;
-    font-size: 14px;
+    border: 1px solid rgba(246, 90, 90, 0.25);
+    border-radius: 10px;
+    font-size: 13.5px;
     font-weight: 500;
+    box-shadow: var(--neo-shadow-sm);
+}
+
+/* ===================================================================
+   Nav — Frosted ultra-thin strip
+   =================================================================== */
+
+.nav-frosted {
+    background: rgba(18, 16, 27, 0.78);
+    backdrop-filter: saturate(180%) blur(20px);
+    -webkit-backdrop-filter: saturate(180%) blur(20px);
+    border-bottom: 1px solid var(--color-border);
+    box-shadow: 0 1px 0 rgba(196, 181, 253, 0.04), 0 4px 16px rgba(0, 0, 0, 0.35);
+}
+
+/* ===================================================================
+   Neomorphic Tab Switcher
+   =================================================================== */
+
+.tab-bar {
+    display: flex;
+    gap: 4px;
+    background: var(--color-bg);
+    border: 1px solid var(--color-border);
+    border-radius: 12px;
+    padding: 4px;
+    box-shadow: var(--neo-shadow-inset);
+}
+
+.tab-item {
+    flex: 1;
+    padding: 7px 16px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--color-text-secondary);
+    border-radius: 9px;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    text-align: center;
+    transition:
+        color 0.18s ease,
+        background 0.18s ease,
+        box-shadow 0.18s ease;
+}
+.tab-item:hover {
+    color: var(--color-text-primary);
+    background: rgba(196, 181, 253, 0.06);
+}
+.tab-item.active {
+    color: var(--color-text-primary);
+    background: var(--color-surface);
+    box-shadow: var(--neo-shadow-sm);
+}
+
+/* ===================================================================
+   Stat / Metric Widget
+   =================================================================== */
+
+.stat-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: var(--neo-shadow-sm);
+    flex-shrink: 0;
+}
+
+/* ===================================================================
+   Divider
+   =================================================================== */
+
+.divider {
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--color-border), transparent);
+    margin: 16px 0;
+}
+
+/* ===================================================================
+   Scrollbar Theming
+   =================================================================== */
+
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+    background: rgba(196, 181, 253, 0.15);
+    border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: rgba(196, 181, 253, 0.28);
 }
 
 /* ===================================================================
@@ -326,6 +525,5 @@ select.input option {
         animation-duration: 0.01ms !important;
         animation-iteration-count: 1 !important;
         transition-duration: 0.01ms !important;
-        scroll-behavior: auto !important;
     }
 }
