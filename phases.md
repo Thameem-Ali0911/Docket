@@ -129,7 +129,88 @@
 
 ---
 
-## Phase 9 — Deployment & Demo Readiness
+## Phase 9 — Production Hardening & Evaluation Remediation
+**Goal:** Address and eliminate 100% of the weaknesses, security vulnerabilities, design flaws, code smells, reliability gaps, and testing deficiencies identified in `Docket_Evaluation_Report.md`, elevating the codebase from an MVP state to senior-engineer / production-ready standard (targeting ≥ 9.0/10 across all evaluation areas).
+
+### 9.1 — Critical Security & Privacy Remediation (Immediate Priority)
+- **Authenticated File Access:** Remove `permitAll()` for `/uploads/**` from `SecurityConfig.java`. Replace unauthenticated static resource exposure with a secure, workspace-isolated controller endpoint: `GET /api/documents/{id}/file` (and `/preview`). Re-verify that `getDocumentForWorkspace` enforces strict workspace ownership checks before streaming files.
+- **Login Rate Limiting & Brute-Force Protection:** Implement an authentication attempt limiter and temporary account lockout mechanism on `AuthController.login` to defend against credential stuffing and brute-force attacks.
+- **Git Artifact & Sensitive File Purge:** Scrub and untrack all committed user-uploaded files from `/uploads` and `/backend/uploads` (`git rm -r --cached`), and harden `.gitignore` to prevent any future uploaded PDFs or images from being staged or committed.
+- **JWT Hardening & Token Refresh Strategy:** Implement refresh token infrastructure (or HTTP-only secure cookie strategy) and remove reliance on vulnerable raw `localStorage` tokens.
+
+### 9.2 — Database & API Performance Optimization
+- **Workspace Indexing Migration:** Create a new Flyway migration (`V7__add_workspace_and_query_indexes.sql`) adding explicit indexes on `documents(workspace_id)`, `documents(status)`, and `users(workspace_id)` to eliminate table scans on workspace-scoped queries.
+- **Paginated Document Listing:** Upgrade `GET /api/documents` to support Spring Data `Pageable` (`page`, `size`, `sort`) with default page limits and a metadata envelope (total elements, total pages, current page), preventing memory spikes on large workspaces.
+- **Single-Document API Endpoint:** Add `GET /api/documents/{id}` returning `DocumentListItemDto` so clients and detail views can fetch a single document directly without loading the entire workspace collection.
+
+### 9.3 — Architecture & Backend Code Quality Refactoring
+- **Generic Extraction Engine:** Collapse the triplicated methods in `ExtractionService.java` (`extractInvoiceFields`, `extractContractFields`, `extractResumeFields`) into a single generic method: `extractFields(Document, String promptText, String schema, Class<T> dtoType)` driven by a `Map<DocumentType, ExtractorConfig>` or clean strategy pattern.
+- **Sanitization Utility Unification:** Deduplicate the repeated `stripNulBytes()` helper from `AnomalyService`, `SummarizeService`, `DocumentProcessingService`, and `ExtractionService` into a single shared utility (`SanitizationUtils.java`).
+- **Controller/Service Layer Boundary Discipline:** Refactor `DocumentController.java` to eliminate direct repository dependencies (`ExtractionRepository`, `SummaryRepository`, `AnomalyFlagRepository`), routing all sub-resource retrieval through `DocumentService`.
+- **Environment-Gated Logging Configuration:** Gate `show-sql` in `application.yml` so that verbose SQL logging is active only in the `dev` profile and disabled in production.
+- **Structured Logging & Correlation IDs:** Implement an MDC-based request correlation ID filter (`X-Request-ID`) that propagates across async processing threads to allow end-to-end trace correlation in logs.
+
+### 9.4 — LLM Resilience, Async Recovery & Storage Abstraction
+- **Gemini Client Exponential Backoff & Retry:** Implement resilient retry logic with jittered exponential backoff (e.g. 3 attempts) in `GeminiClient.java` for transient network blips, HTTP 429 rate limits, and 5xx API errors before marking documents as failed.
+- **Stuck Document Reconciliation Job:** Add a scheduled background reconciliation task (`DocumentReconciliationScheduler`) that detects documents stuck in `PENDING` status for more than N minutes and re-triggers OCR/extraction pipelines.
+- **Manual Reprocess Endpoint:** Add `POST /api/documents/{id}/reprocess` on `DocumentController` and a "Reprocess" button on `DocumentDetail.jsx` allowing users to re-trigger failed processing jobs.
+- **Storage Service Abstraction:** Decouple file storage behind a `StorageService` interface with `LocalStorageService` (development) and an S3-compatible `S3StorageService` implementation (production) configured via Spring profiles.
+
+### 9.5 — Monitoring, Observability & Health Checks
+- **Spring Boot Actuator:** Add `spring-boot-starter-actuator` with configured `/actuator/health` (including PostgreSQL database connectivity check and disk space) and `/actuator/metrics` endpoints.
+- **Docker Healthcheck Integration:** Wire `/actuator/health` into `docker-compose.yml` for the `backend` service healthcheck.
+- **LLM Diagnostics:** Provide diagnostic telemetry capturing Gemini API failure rates and latency.
+
+### 9.6 — Frontend Error Resilience
+- **Graceful Error Handling in Detail View:** Refactor `DocumentDetail.jsx` from `Promise.all` to `Promise.allSettled` (or isolated queries), ensuring that an anomaly check or summarization timeout does not crash or blank the entire document detail view.
+
+### 9.7 — Automated Test Suite & CI/CD Automation
+- **Comprehensive Backend Testing (JUnit 5 + Spring Boot Test + Mockito):**
+  - High-priority security test: Verify cross-workspace isolation (requesting document ID of Workspace B as User from Workspace A returns 404).
+  - Integration tests for `AuthService` (signup happy-path, duplicate email conflict, login verification, lockout on brute force).
+  - Service tests for `DocumentService`, `ExtractionService`, `SummarizeService`, `AnomalyService`, and `ExportService`.
+  - Repository `@DataJpaTest` tests for custom query methods and Flyway migrations.
+- **GitHub Actions CI Pipeline:** Create `.github/workflows/ci.yml` running automated Maven builds & tests (`mvn test`) and frontend validation (`npm run build` / lint / tests) on every push and PR.
+
+### 9.8 — Documentation & Dependency Reconciliation
+- **Documentation Parity:** Reconcile `README.md`, `architecture.md`, and `prd.md` with actual codebase reality (dependencies, test setup, storage architecture, API endpoints).
+
+**Definition of Done (Phase 9):**
+1. `/uploads/**` is completely protected; files can only be accessed via authenticated, workspace-checked endpoints (`GET /api/documents/{id}/file`).
+2. Login rate limiting is active and verified against brute-force attempts.
+3. Flyway migration `V7` adds `idx_documents_workspace_id` and query indexes.
+4. `GET /api/documents` supports pagination and `GET /api/documents/{id}` returns single document details.
+5. `ExtractionService` and `SanitizationUtils` refactored with zero duplicate code; `DocumentController` strictly delegates to services.
+6. `GeminiClient` has exponential backoff retry; stuck documents are automatically reconciled or manually reprocessable.
+7. Spring Boot Actuator `/actuator/health` is active, checks DB health, and is wired into Docker Compose.
+8. `DocumentDetail.jsx` uses `Promise.allSettled` to prevent single-point-of-failure page crashes.
+9. Full backend test suite passes (`mvn test`) with ≥70% service coverage, including cross-workspace isolation tests.
+10. GitHub Actions CI pipeline passes cleanly on build and test execution.
+11. `README.md` and documentation 100% accurately reflect the codebase without false claims.
+
+---
+
+## Phase 10 — Advanced Polish, Human-in-the-Loop & API Governance
+**Goal:** Implement enterprise-grade features identified in the 9.5/10 tier of the evaluation report, including human-in-the-loop data correction, real-time status updates, OpenAPI documentation, and API governance.
+
+- **Human-in-the-Loop Field Editing & Corrections:** Build an editable fields interface in `DocumentDetail.jsx` and a corresponding backend endpoint (`PATCH /api/documents/{id}/extraction`) to allow users to review, correct, and save extracted data, treating human corrections as authoritative ground truth that overrides future anomaly comparisons.
+- **Automatic Status Polling / Real-Time Updates:** Implement automated polling with backoff (or WebSocket/SSE) on `Dashboard.jsx` and `DocumentDetail.jsx` so documents transition from `PENDING` to `PROCESSED` without requiring manual browser refreshes.
+- **OpenAPI / Swagger Documentation:** Add `springdoc-openapi` to provide auto-generated, interactive API documentation at `/swagger-ui.html`.
+- **Per-Workspace LLM Budget & Usage Guard:** Introduce per-workspace rate and budget limits on LLM invocations to prevent denial-of-wallet / budget exhaustion attacks.
+- **Mobile Responsiveness & Accessibility (WCAG AA):** Conduct a mobile responsive audit across all screen widths (`sm`, `md`, `lg`, `xl`), ensure visible focus rings, and add proper `aria-label` attributes on icon-only buttons.
+- **API Versioning:** Introduce clean URL versioning (`/api/v1/`) across all endpoints.
+- **Frontend Component Tests:** Add Vitest and React Testing Library tests for critical UI components.
+
+**Definition of Done (Phase 10):**
+1. Users can edit extracted fields directly in `DocumentDetail.jsx`, saving corrections via `PATCH /api/documents/{id}/extraction`.
+2. Dashboard and detail pages update processing status automatically without manual reload.
+3. Interactive Swagger UI is available and functional at `/swagger-ui.html`.
+4. Mobile layout and accessibility pass WCAG AA standards.
+5. Per-workspace API budget/usage guards prevent runaway LLM costs.
+
+---
+
+## Phase 11 — Deployment & Demo Readiness
 **Goal:** Publicly accessible, demo-ready deployment.
 
 - Deploy frontend (Vercel/Netlify) and backend (Render/Railway), connect to hosted Postgres
@@ -141,12 +222,13 @@
 
 ---
 
-## Phase 10 (Stretch — only if ahead of schedule)
+## Phase 12 (Stretch — only if ahead of schedule)
 
-- Batch upload
+- Batch upload (multiple files at once)
 - Confidence scores on extracted fields
 - Background job queue (Spring Kafka or RabbitMQ + Spring AMQP)
 - 4th document type (KYC form)
 - Billing simulation (Stripe test mode)
+- Multi-document comparative anomaly detection (trend-based, not just template-diff)
 
-**Note:** Do not start Phase 10 items until Phases 0–9 are fully complete and demo-stable.
+**Note:** Do not start Phase 12 items until Phases 0–11 are fully complete and demo-stable.

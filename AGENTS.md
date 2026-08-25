@@ -54,7 +54,7 @@ If a task would require violating any of the above to "get it working faster," s
 
 ## 4. Coding Boundaries (recap — full detail in `rules.md`)
 
-- Stick to the approved stack: Java 17+/Spring Boot backend, React/Vite/Tailwind frontend, PostgreSQL, Tess4J/PDFBox for OCR, Google Gemini API for LLM calls. Do not introduce a second backend language, a second database, or a queue/broker outside of Phase 10 stretch work.
+- Stick to the approved stack: Java 17+/Spring Boot backend, React/Vite/Tailwind frontend, PostgreSQL, Tess4J/PDFBox for OCR, Google Gemini API for LLM calls. Do not introduce a second backend language, a second database, or a queue/broker outside of Phase 12 stretch work.
 - Controllers stay thin; business logic lives in services; repositories only do data access.
 - Every new REST endpoint gets a short Javadoc comment (purpose, input, output).
 - Follow the existing package layout under `backend/src/main/java/com/docket/...` and `frontend/src/...` — don't restructure folders without updating `architecture.md` first.
@@ -137,16 +137,16 @@ If a past decision recorded in `memory.md`'s "Key Decisions & Why" turns out to 
 
 ## 8. Definition of "Production-Ready" (Final Loop Exit Criteria)
 
-The loop in §1–§7 governs each individual session. This section governs when the loop is allowed to end — i.e., when Docket is actually a production-ready SaaS product, not just "all 10 phases in `phases.md` marked complete." Do not declare the project done unless every item below is true and verified, not assumed:
+The loop in §1–§7 governs each individual session. This section governs when the loop is allowed to end — i.e., when Docket is actually a production-ready SaaS product, not just "all 12 phases in `phases.md` marked complete." Do not declare the project done unless every item below is true and verified, not assumed:
 
-- [ ] All 10 phases in `phases.md` completed, each with its Definition of Done actually verified (not just checked off)
+- [ ] All 12 phases in `phases.md` completed, each with its Definition of Done actually verified (not just checked off)
 - [ ] Backend and frontend both build cleanly from a fresh clone with no manual patching (`mvn clean install` / `npm install && npm run build` succeed)
 - [ ] Environment variables are fully documented in `.env.example` / `application-dev.yml.example`, and the app fails with a clear error (not a silent crash) if a required one is missing
 - [ ] Auth, workspace isolation, and the §3 security checklist have been re-verified end-to-end — not just per-PR, but as a final pass across the whole codebase
 - [ ] Core user flows (signup → upload → extraction → summary → anomaly flag → export) work end-to-end against a real deployed instance, not just `localhost`
 - [ ] Error states (bad file, OCR failure, LLM failure, network failure) are handled gracefully in the UI — no blank screens, no unhandled promise rejections
 - [ ] Basic automated test coverage exists for the critical paths (auth, upload, extraction parsing/validation) per `rules.md` §testing conventions — not necessarily exhaustive, but not zero
-- [ ] The app is actually deployed (per Phase 9) to the target hosts (frontend, backend, DB) and reachable at a public URL, with deployment steps reproducible from `architecture.md`
+- [ ] The app is actually deployed (per Phase 11) to the target hosts (frontend, backend, DB) and reachable at a public URL, with deployment steps reproducible from `architecture.md`
 - [ ] `memory.md`, `phases.md`, `prd.md`, `architecture.md`, `rules.md`, and `design.md` all reflect the final, as-built state — not an earlier planning snapshot
 - [ ] No secrets, API keys, or `.env` files are present in git history (check, don't assume) — if any were ever committed, treat them as compromised and rotate them
 

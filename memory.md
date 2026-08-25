@@ -16,16 +16,16 @@
 
 ## Current Status
 
-- **Active Phase:** Phase 8.5 complete (neomorphic UI overhaul applied) — ready for Phase 9
-- **Last Updated:** 2026-08-19
-- **Overall Progress:** ~98% — Phases 0–8.5 complete. Full neomorphic Apple-style design system applied across all pages. Shadow tokens, spring easing, inset inputs, extruded cards, frosted nav.
+- **Active Phase:** Phase 9 — Production Hardening & Evaluation Remediation
+- **Last Updated:** 2026-08-25
+- **Overall Progress:** ~75% — Phases 0–8.5 complete. Entered Phase 9 to resolve all security, architecture, performance, resilience, observability, and testing gaps identified in `Docket_Evaluation_Report.md`.
 
 ## Completed
 
 - [x] Project scoped and defined (`prd.md`)
 - [x] Architecture and tech stack decided (`architecture.md`)
 - [x] Coding/AI rules established (`rules.md`)
-- [x] Phased build plan created (`phases.md`)
+- [x] Phased build plan created and expanded to 12 phases (`phases.md`)
 - [x] Design system defined (`design.md`)
 - [x] `frontend/` initialized (Vite + React, `App.jsx` calling backend health check)
 - [x] `backend/` initialized (Spring Boot, Maven wrapper committed, `DocketApplication.java`)
@@ -74,15 +74,18 @@
 
 ## In Progress
 
-- None — neomorphic overhaul complete and build verified.
+- Phase 9: Production Hardening & Evaluation Remediation — addressing all findings from `Docket_Evaluation_Report.md`.
 
 ## Next Steps (in order)
 
-1. Proceed to Phase 9 (Deployment & Demo Readiness).
-2. Run `docker compose up --build` to verify full container stack builds and comes up healthy.
-3. Verify environment variable parity with `.env.example` / `application-dev.yml.example`.
-4. Author `DEMO_SCRIPT.md` click-through script (Signup → Upload → OCR/Extraction → Benchmark Template → Anomaly Detection → Filter/Search → Export).
-5. Run §8 Production-Ready checklist from `AGENTS.md`.
+1. **Phase 9.1 (Security):** Remove `/uploads/**` from `permitAll()`; implement authenticated `GET /api/documents/{id}/file` endpoint with workspace checks; add login brute-force attempt limiter; purge committed upload files and update `.gitignore`.
+2. **Phase 9.2 (Database & API Performance):** Write Flyway migration `V7` for `idx_documents_workspace_id`; add `Pageable` pagination to `GET /api/documents`; add `GET /api/documents/{id}` single document endpoint.
+3. **Phase 9.3 (Architecture & Code Quality):** Refactor `ExtractionService` to generic `extractFields`; extract shared `SanitizationUtils.stripNulBytes()`; clean up `DocumentController` repository calls; profile-gate `show-sql`; add MDC correlation ID filter.
+4. **Phase 9.4 (LLM Resilience & Storage Abstraction):** Add retry-with-exponential-backoff in `GeminiClient`; implement stuck document reconciliation job & manual reprocess endpoint; abstract `StorageService` interface.
+5. **Phase 9.5 & 9.6 (Observability & Frontend Resilience):** Add `spring-boot-starter-actuator` and wire into Compose healthcheck; switch `DocumentDetail.jsx` from `Promise.all` to `Promise.allSettled`.
+6. **Phase 9.7 & 9.8 (Testing & CI/CD):** Build backend test suite (cross-workspace isolation 404 test, `AuthService`, `DocumentService`, `ExtractionService` tests); create GitHub Actions CI workflow (`.github/workflows/ci.yml`); reconcile `README.md` docs.
+7. **Phase 10:** Proceed to Phase 10 for human-in-the-loop field corrections (`PATCH /api/documents/{id}/extraction`), status polling, and OpenAPI docs.
+8. **Phase 11 & 12:** Deployment & Demo Readiness (Phase 11), followed by stretch goals (Phase 12).
 
 
 ## Key Decisions & Why
@@ -93,9 +96,10 @@
 | Java + Spring Boot for backend | Mature enterprise framework, strong typing, integrated ORM/security/migrations; natural fit for a student comfortable in Java | architecture.md §3.2, §7 |
 | Postgres over MongoDB | Extracted fields/flags/templates are relational data | architecture.md §7 |
 | Jackson + Bean Validation for both API and LLM JSON output validation | One validation pattern across the backend instead of a second library | architecture.md §3.6, §7 |
-| Synchronous processing for MVP (no queue) | Avoids premature infra complexity; queue (Kafka/RabbitMQ) is a stretch goal only | architecture.md §3.4, phases.md Phase 10 |
+| Synchronous processing for MVP (no queue) | Avoids premature infra complexity; queue (Kafka/RabbitMQ) is a stretch goal only | architecture.md §3.4, phases.md Phase 12 |
 | Tess4J over cloud OCR APIs | Free, no per-page cost, sufficient for MVP's "clean/typed documents" scope | architecture.md §7 |
 | Switched LLM provider from Anthropic (Claude) to Google Gemini | User has a Gemini API key, not an Anthropic one; no LLM code was written yet (Phase 4 not started), so this was a docs/config-only rename with no migration cost | architecture.md §3.6, prd.md, rules.md §2, phases.md Phase 4 — see Session 6 |
+| Phase Plan Expansion (Phases 9 & 10 inserted; Deployment & Stretch moved to 11 & 12) | Rigorous architectural evaluation (`Docket_Evaluation_Report.md`) identified production gaps (unauthenticated file access, zero tests, triplicated code, lack of pagination, missing DB index); formal phases inserted to remediate all gaps to senior SWE bar | phases.md Phase 9 & 10, memory.md — Session 33 |
 
 ## Known Issues / Gotchas
 
@@ -477,5 +481,17 @@ pm run build).
 - Rewrote `TemplateManager.jsx`: frosted nav breadcrumb, neomorphic tab bar with dot status indicator per type, `AnimatePresence mode="wait"` panel swap, `card-inset` active template row, compact set/remove controls.
 - Files touched: `frontend/src/index.css`, `frontend/src/pages/Login.jsx`, `frontend/src/pages/Signup.jsx`, `frontend/src/pages/Dashboard.jsx`, `frontend/src/pages/UploadDocument.jsx`, `frontend/src/pages/TemplateManager.jsx`, `memory.md`.
 - Tested/confirmed: `npm run build` passed cleanly — `✓ built in 718ms`, 2224 modules, 0 errors.
-- Still untested / follow-up: `DocumentDetail.jsx` and `AnomalyFlag.jsx` not yet updated to neomorphic style. Full `docker compose up --build` for Phase 9.
-- Next session should: Apply neomorphic treatment to `DocumentDetail.jsx` and `AnomalyFlag.jsx` if desired, then start Phase 9 (container build + `DEMO_SCRIPT.md`).
+- Still untested / follow-up: `DocumentDetail.jsx` and `AnomalyFlag.jsx` not yet updated to neomorphic style.
+- Next session should: Proceed to Phase 9.
+
+### Session 33 — 2026-08-25
+- Conducted deep analysis of `Docket_Evaluation_Report.md` covering all 18 evaluation dimensions and the 3-tier action plan.
+- Re-architected project phases roadmap in `phases.md`:
+  - Created **Phase 9 (Production Hardening & Evaluation Remediation)**: covers critical security (`/uploads/**` auth lockdown, login brute-force limiter, git uploads scrub), database indexing (`idx_documents_workspace_id`), API pagination & single-doc endpoints, backend architectural refactoring (generic `extractFields`, shared `SanitizationUtils`, controller-to-service decoupling, profile-gated `show-sql`, MDC request correlation IDs), LLM resilience (exponential backoff, stuck document reconciliation job, manual reprocess endpoint, storage abstraction), Spring Boot Actuator health checks, `Promise.allSettled` frontend error resilience, comprehensive JUnit 5 + Mockito + Spring Boot test suite with cross-workspace 404 security tests, and GitHub Actions CI.
+  - Created **Phase 10 (Advanced Polish, Human-in-the-Loop & API Governance)**: covers human-in-the-loop field correction UI and `PATCH /api/documents/{id}/extraction` endpoint, automatic status polling, `springdoc-openapi` Swagger documentation, per-workspace LLM budget guards, mobile responsiveness & WCAG AA accessibility audit, and API versioning.
+  - Incremented Deployment & Demo Readiness to **Phase 11**.
+  - Incremented Stretch Goals to **Phase 12**.
+- Synchronized documentation across `phases.md`, `memory.md`, `README.md`, `architecture.md`, `rules.md`, and `AGENTS.md`.
+- Files touched: `phases.md`, `memory.md`, `README.md`, `architecture.md`, `rules.md`, `AGENTS.md`.
+- Tested/confirmed: All phase numbering and cross-references verified consistent across the repository docs.
+- Next session should: Begin Phase 9 execution, starting with Phase 9.1 critical security remediation (`/uploads/**` auth lockdown, login attempt limiter, committed files scrub).

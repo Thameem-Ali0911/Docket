@@ -100,17 +100,22 @@
 - LLM JSON responses are deserialized into dedicated **Java record/DTO classes** (one per document type) using **Jackson**, and validated with Bean Validation before being persisted — invalid output is rejected, never silently patched
 
 ### 3.7 File Storage
-- Dev: local disk (`/uploads`), served via a simple Spring `Resource`-based download endpoint
-- Production-style demo: any S3-compatible bucket via the **AWS SDK for Java v2** (AWS S3 free tier, Cloudflare R2, or Supabase Storage)
+- Decoupled behind a `StorageService` interface with pluggable implementations:
+  - **Local Disk (`LocalStorageServiceImpl`):** For local development (`/uploads`), served exclusively via authenticated, workspace-checked endpoints (`GET /api/documents/{id}/file`).
+  - **S3-Compatible Object Storage (`S3StorageService`):** For staging/production environments (AWS S3, Cloudflare R2, or Supabase Storage) via AWS SDK for Java v2.
 
-### 3.8 Auth
-- JWT-based session auth via **Spring Security + jjwt** (or `nimbus-jose-jwt`), passwords hashed with **Spring Security's `BCryptPasswordEncoder`**
-- Spring Security filter chain used for auth guards on protected routes
-- No third-party OAuth needed for MVP (keep it simple)
+### 3.8 Auth & Security
+- JWT-based session auth via **Spring Security + jjwt**, passwords hashed with **Spring Security's `BCryptPasswordEncoder`**
+- Login attempt limiting & lockout protection on `AuthController.login`
+- Workspace isolation enforced on every query and file download at the service layer
 
-### 3.9 Deployment
+### 3.9 Observability & Health
+- **Spring Boot Actuator** (`/actuator/health`, `/actuator/metrics`) with database connectivity verification, wired into Docker healthchecks
+- MDC-based request correlation ID tracking (`X-Request-ID`) across async processing threads
+
+### 3.10 Deployment
 - **Frontend:** Vercel or Netlify (free tier)
-- **Backend:** Render or Railway (free tier) — both support Java/Spring Boot via a Docker build, or a plain `java -jar` start command
+- **Backend:** Render or Railway (free tier) — both support Java/Spring Boot via Docker or container runtime
 - **DB:** Supabase/Neon free tier
 - **Env config:** `application.yml` / `application-{profile}.yml` with environment variable placeholders (`${GEMINI_API_KEY}`), never committing real secrets (see rules.md)
 
@@ -228,12 +233,22 @@ docket/
 ```
 POST   /api/auth/signup
 POST   /api/auth/login
-GET    /api/documents
+GET    /api/documents                    # Supports ?page=0&size=20&sort=uploadedAt,desc
 POST   /api/documents/upload
-GET    /api/documents/:id
-POST   /api/templates              # mark a document as the standard template
-GET    /api/templates/:type
-GET    /api/documents/:id/export
+GET    /api/documents/{id}               # Single document metadata + list-item shape
+GET    /api/documents/{id}/file          # Authenticated, workspace-scoped file stream
+GET    /api/documents/{id}/extraction    # Extracted structured fields
+PATCH  /api/documents/{id}/extraction    # Human-in-the-loop field corrections (Phase 10)
+GET    /api/documents/{id}/summary       # Plain-English summary
+GET    /api/documents/{id}/anomalies     # Template comparison flags
+POST   /api/documents/{id}/reprocess     # Re-trigger failed OCR/extraction job
+POST   /api/templates                    # Set a document as the standard template
+GET    /api/templates/{type}
+DELETE /api/templates/{type}
+GET    /api/documents/{id}/export?format={json|csv}
+GET    /api/documents/export?format={json|csv}
+GET    /actuator/health                  # Database + application health check
+GET    /swagger-ui.html                  # Interactive OpenAPI docs (Phase 10)
 ```
 
 ## 8. Prerequisites & Local Setup

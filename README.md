@@ -60,7 +60,7 @@ docket/
 ├── prd.md              # What to build, target users, features
 ├── architecture.md      # Full architecture, stack, folder structure, prerequisites
 ├── rules.md              # Coding rules, approved libraries, AI/LLM boundaries
-├── phases.md             # Step-by-step build plan (10 phases)
+├── phases.md             # Step-by-step build plan (12 phases)
 ├── design.md             # Colors, fonts, typography, component conventions
 ├── memory.md              # Running project log / session history
 ├── README.md              # You are here
@@ -231,7 +231,7 @@ This repo is built around six living documents that stay in sync with the codeba
 | [`prd.md`](./prd.md) | What to build, target users, features, non-goals |
 | [`architecture.md`](./architecture.md) | Stack, app flow, folder structure, data model, prerequisites |
 | [`rules.md`](./rules.md) | Approved libraries, error handling, AI/LLM boundaries, what to avoid |
-| [`phases.md`](./phases.md) | The 10-phase build plan with a Definition of Done per phase |
+| [`phases.md`](./phases.md) | The 12-phase build plan with a Definition of Done per phase |
 | [`design.md`](./design.md) | Color palette, typography, component conventions |
 | [`memory.md`](./memory.md) | Running log of progress, decisions, and session history |
 
@@ -239,7 +239,7 @@ This repo is built around six living documents that stay in sync with the codeba
 
 ## Build Phases
 
-The project is broken into 10 phases (see `phases.md` for full detail):
+The project is broken into 12 phases (see `phases.md` for full detail):
 
 0. Project Setup
 1. Auth & Workspace
@@ -250,15 +250,18 @@ The project is broken into 10 phases (see `phases.md` for full detail):
 6. Template Manager & Anomaly Flagging
 7. Extend to Contract and Resume types
 8. Dashboard Polish & Export
-9. Deployment & Demo Readiness
-10. *(Stretch)* Batch upload, confidence scores, job queue, billing simulation, 4th document type
+8.5 Modern 3D & Motion Visual Overhaul ("Aurora Obsidian")
+9. Production Hardening & Evaluation Remediation
+10. Advanced Polish, Human-in-the-Loop & API Governance
+11. Deployment & Demo Readiness
+12. *(Stretch)* Batch upload, confidence scores, job queue, billing simulation, 4th document type, trend anomaly detection
 
 Current status: see [`memory.md`](./memory.md).
 
 ## Testing
 
 - **Backend:** JUnit 5 + Spring Boot Test + Mockito
-- **Frontend:** (add Vitest + React Testing Library as the project matures)
+- **Frontend:** Vitest + React Testing Library
 - Sample/test documents live in `docs/sample-documents/` — synthetic or anonymized public templates only, never real client data (see `rules.md` §5)
 
 ## Known Limitations
@@ -266,7 +269,7 @@ Current status: see [`memory.md`](./memory.md).
 - English-language documents only (v1)
 - Scoped to typed/clean documents — handwriting recognition is out of scope for MVP
 - Single workspace role (Admin) — no granular permissions yet
-- Synchronous processing — large batches may be slow until a background queue is introduced (Phase 10 stretch)
+- Synchronous processing — large batches may be slow until a background queue is introduced (Phase 12 stretch)
 
 ## License
 
