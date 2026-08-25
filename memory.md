@@ -541,12 +541,16 @@ pm run build).
 - Next session should: Run Phase 11 — `docker compose up --build` to verify V8 migration, confirm all containers healthy, run full e2e smoke test (sign up → upload → extract → human-correct → export), and document the deployment steps.
 
 ### Session 36 — 2026-08-25
-- Executed Phase 11 (Deployment & Demo Readiness).
+- Executed Phase 11 (Deployment & Demo Readiness) and verified live Docker Compose orchestration.
 - **11.1 Demo Data Seeder (Flyway V9):** Created `V9__seed_demo_data.sql` inserting a pre-seeded demo workspace (`Acme Global Demo`), user (`demo@docket.ai` / `Demo1234!`), 3 rich sample documents (Invoice with Net-15 anomaly, Contract with 14-day termination notice anomaly, clean Senior Resume), and active templates. Allows instant evaluation and UI exploration out of the box without requiring local OCR execution or a live Gemini API key.
 - **11.2 5-Minute Evaluation Walkthrough (`DEMO_SCRIPT.md`):** Authored detailed 5-minute evaluator and judge walkthrough click-path covering login, dashboard metrics, AI field extraction, plain-English summarization, template deviation detection, human-in-the-loop editing (`PATCH /api/documents/{id}/extraction`), export capabilities, interactive OpenAPI Swagger UI (`/swagger-ui.html`), and Actuator health checks (`/actuator/health`).
 - **11.3 Environment & Production Documentation:** Overhauled `.env.example`, `README.md`, and `architecture.md` with complete environment templates, endpoint catalog, Swagger access links, and Actuator health specifications.
-- **11.4 Docker & Container Health:** Hardened `backend/Dockerfile` with `wget` and `curl` for container healthcheck execution.
+- **11.4 Docker Container Health & Spring Boot 3.4/3.5 Compatibility:**
+  - Resolved `NoSuchMethodError` on `ControllerAdviceBean` during Swagger startup by upgrading `springdoc-openapi-starter-webmvc-ui` from `2.6.0` to `2.8.5` (Spring Framework 6.2 compatibility) and adding `@Hidden` to `GlobalExceptionHandler.java`.
+  - Added `wget` and `curl` to `backend/Dockerfile` for Actuator healthcheck execution.
+  - Successfully executed `docker compose up -d` — all three containers (`docket-db-1`, `docket-backend-1`, `docket-frontend-1`) came up in `healthy` / `running` status.
+  - Live round-trip verified: `GET /actuator/health` returned `"status":"UP"`, `GET /v3/api-docs` returned full OpenAPI 3.0 schema, and `POST /api/auth/login` (`demo@docket.ai` / `Demo1234!`) returned JWT token and loaded the 3 pre-seeded documents.
 - **11.5 Tests & Verification:** Added `AuthServiceTest#testDemoPasswordHash` verifying the BCrypt seed hash against `BCryptPasswordEncoder`. Total: **26 tests, 0 failures, BUILD SUCCESS**. Frontend: `npm run build` clean in 475ms.
-- Files touched: `backend/Dockerfile`, `.env.example`, `README.md`, `architecture.md`, `AuthServiceTest.java`. New: `DEMO_SCRIPT.md`, `V9__seed_demo_data.sql`.
-- Tested/confirmed: `mvn test` → 26 tests, 0 failures, 0 errors. `npm run build` → clean production bundle (424.68 kB JS).
+- Files touched: `pom.xml`, `GlobalExceptionHandler.java`, `backend/Dockerfile`, `.env.example`, `README.md`, `architecture.md`, `AuthServiceTest.java`. New: `DEMO_SCRIPT.md`, `V9__seed_demo_data.sql`.
+- Tested/confirmed: Live Docker Compose run verified: `docket-backend-1` healthy, `docket-db-1` healthy, `docket-frontend-1` running. `curl /actuator/health` = UP. Live auth login & document fetch verified. `mvn test` → 26 tests, 0 failures. `npm run build` → clean.
 - Next session should: Begin Phase 12 (Stretch Goals) — Phase 12.1 batch upload capability in `UploadDocument.jsx` and backend multi-file endpoint.
