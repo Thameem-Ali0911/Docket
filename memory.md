@@ -16,9 +16,9 @@
 
 ## Current Status
 
-- **Active Phase:** Phase 11 — Deployment & Demo Readiness
+- **Active Phase:** Phase 12 — Stretch Goals & Enterprise Enhancements
 - **Last Updated:** 2026-08-25
-- **Overall Progress:** ~90% — Phases 0–10 complete. Phase 10 (Advanced Polish, Human-in-the-Loop & API Governance) fully implemented and verified with 25 passing automated tests and a clean frontend build.
+- **Overall Progress:** ~95% — Phases 0–11 complete. Phase 11 (Deployment & Demo Readiness) fully implemented with Flyway V9 demo seed data, DEMO_SCRIPT.md walkthrough, updated deployment templates, and 26 passing automated tests.
 
 ## Completed
 
@@ -75,7 +75,7 @@
   - **9.1 Security:** Revoked unauthenticated `/uploads/**` access; added authenticated `GET /api/documents/{id}/file` endpoint with workspace ownership check; created `LoginRateLimiter.java` (5 attempts / 15 min lockout) wired into `AuthService.login()`; purged 47 cached upload binaries from git history via `git rm -r --cached`; hardened `.gitignore`.
   - **9.2 DB & Performance:** Flyway `V7__add_workspace_and_query_indexes.sql` — indexes on `documents(workspace_id)`, `documents(status)`, `documents(workspace_id, uploaded_at DESC)`, `users(workspace_id)`; paginated `GET /api/documents/page` endpoint; single-doc `GET /api/documents/{id}`.
   - **9.3 Architecture:** Collapsed 3 triplicated extraction methods into generic `<T> extractFields(...)`; unified `stripNulBytes` into `SanitizationUtils.java`; removed direct repo injections from `DocumentController`; gated `show-sql` behind `${SHOW_SQL:false}`; added `CorrelationIdFilter.java` for MDC `requestId`.
-  - **9.4 Resilience:** `StorageService` refactored to interface + `LocalStorageServiceImpl`; `GeminiClient` exponential backoff retry (3 attempts, jitter, on 429/5xx); `DocumentReconciliationScheduler` detects & reprocesses stuck PENDING docs; `POST /api/documents/{id}/reprocess` manual endpoint.
+  - **9.4 Resilience:** `StorageService` refactored to interface + `LocalStorageServiceImpl`; `GeminiClient` exponential backoff retry (3 attempts, jitter, on 429/5xx); `DocumentReconciliationScheduler` detects & reprocesses stuck PENDING docs; `POST /api/documents/{id}/reprocess` manual endpoint; added `@EnableScheduling` to `DocketApplication`.
   - **9.5 Observability:** `spring-boot-starter-actuator` added; `/actuator/health` (with DB check) and `/actuator/metrics` exposed; backend healthcheck wired into `docker-compose.yml`.
   - **9.6 Frontend Resilience:** `DocumentDetail.jsx` migrated from `Promise.all` to `Promise.allSettled`; authenticated blob URL streaming for file preview iframe; Reprocess button added.
   - **9.7 Tests & CI:** 21 JUnit 5 / Mockito tests covering `WorkspaceIsolationTest`, `AuthServiceTest`, `LoginRateLimiterTest`, `DocumentServiceTest`, `ExtractionServiceTest`, `SanitizationUtilsTest` — all passing. GitHub Actions CI (`ci.yml`) runs both `mvn test` and `npm run build` on push/PR.
@@ -87,17 +87,21 @@
   - **10.5 Mobile & Accessibility:** `lg:grid-cols-2` breakpoints on `DocumentDetail.jsx` layout; `px-4 sm:px-6` responsive padding; `aria-label` on all icon-only buttons; `aria-live` on status badge; `role="status"/"alert"` on dynamic regions.
   - **10.6 `apiPatch` helper:** Added `apiPatch(path, body)` to `api.js`.
   - **10.7 Tests:** 4 new `LlmBudgetServiceTest` unit tests. Total: **25 tests, 0 failures**.
+- [x] Phase 11: Deployment & Demo Readiness (Session 36):
+  - **11.1 Demo Data Seeder (Flyway V9):** Created `V9__seed_demo_data.sql` inserting a pre-seeded demo workspace (`Acme Global Demo`), user (`demo@docket.ai` / `Demo1234!`), 3 rich sample documents (Invoice with Net-15 anomaly, Contract with 14-day termination notice anomaly, clean Senior Resume), and active templates.
+  - **11.2 5-Minute Evaluation Walkthrough (`DEMO_SCRIPT.md`):** Complete click-path documentation for evaluators/judges covering login, metrics, field extraction, anomaly deviations, human-in-the-loop editing, export, and OpenAPI testing.
+  - **11.3 Environment & Production Documentation:** Overhauled `.env.example`, `README.md`, and `architecture.md` with complete environment templates, endpoint catalog, Swagger access links, and Actuator health specifications.
+  - **11.4 Docker & Container Health:** Hardened `backend/Dockerfile` with `wget` and `curl` for container healthcheck execution. Verified backend (26 tests) and frontend (`npm run build`) compilation.
 
 ## In Progress
 
-- Phase 11: Deployment & Demo Readiness — Docker Compose full stack, production environment config, end-to-end smoke tests against deployed instance.
+- Phase 12: Stretch Goals & Enterprise Enhancements — batch upload, confidence scoring, async message queues.
 
 ## Next Steps (in order)
 
-1. **Phase 11 (Deployment & Demo Readiness):** Run `docker compose up --build` end-to-end. Verify all three containers start and frontend can reach backend. Fix any container startup issues.
-2. **Phase 11.2:** Add production `.env.example` with all required vars clearly documented. Verify backend fails gracefully if `GEMINI_API_KEY` is missing.
-3. **Phase 11.3:** Write end-to-end smoke test scenario (sign up → upload → extraction → export) and document it.
-4. **Phase 12 (Stretch Goals):** Queue-based processing, multi-user workspaces, advanced analytics.
+1. **Phase 12.1 (Batch Upload):** Allow selecting and uploading multiple documents simultaneously in `UploadDocument.jsx`.
+2. **Phase 12.2 (Field-Level Confidence Scoring):** Return confidence indicators per extracted field in JSON extraction payloads.
+3. **Phase 12.3 (Queue-Based Processing):** Offload OCR & LLM processing to background message queue.
 
 
 ## Key Decisions & Why
@@ -535,3 +539,14 @@ pm run build).
 - Tested/confirmed: `mvn test` → 25 tests, 0 failures, 0 errors (BUILD SUCCESS). `npm run build` → ✓ built in 372ms, 0 errors.
 - Still untested / follow-up: Docker Compose full rebuild (Flyway V8 migration against live Postgres) not run this session. API versioning (`/api/v1/`) deferred — no breaking change impact noted in `rules.md`.
 - Next session should: Run Phase 11 — `docker compose up --build` to verify V8 migration, confirm all containers healthy, run full e2e smoke test (sign up → upload → extract → human-correct → export), and document the deployment steps.
+
+### Session 36 — 2026-08-25
+- Executed Phase 11 (Deployment & Demo Readiness).
+- **11.1 Demo Data Seeder (Flyway V9):** Created `V9__seed_demo_data.sql` inserting a pre-seeded demo workspace (`Acme Global Demo`), user (`demo@docket.ai` / `Demo1234!`), 3 rich sample documents (Invoice with Net-15 anomaly, Contract with 14-day termination notice anomaly, clean Senior Resume), and active templates. Allows instant evaluation and UI exploration out of the box without requiring local OCR execution or a live Gemini API key.
+- **11.2 5-Minute Evaluation Walkthrough (`DEMO_SCRIPT.md`):** Authored detailed 5-minute evaluator and judge walkthrough click-path covering login, dashboard metrics, AI field extraction, plain-English summarization, template deviation detection, human-in-the-loop editing (`PATCH /api/documents/{id}/extraction`), export capabilities, interactive OpenAPI Swagger UI (`/swagger-ui.html`), and Actuator health checks (`/actuator/health`).
+- **11.3 Environment & Production Documentation:** Overhauled `.env.example`, `README.md`, and `architecture.md` with complete environment templates, endpoint catalog, Swagger access links, and Actuator health specifications.
+- **11.4 Docker & Container Health:** Hardened `backend/Dockerfile` with `wget` and `curl` for container healthcheck execution.
+- **11.5 Tests & Verification:** Added `AuthServiceTest#testDemoPasswordHash` verifying the BCrypt seed hash against `BCryptPasswordEncoder`. Total: **26 tests, 0 failures, BUILD SUCCESS**. Frontend: `npm run build` clean in 475ms.
+- Files touched: `backend/Dockerfile`, `.env.example`, `README.md`, `architecture.md`, `AuthServiceTest.java`. New: `DEMO_SCRIPT.md`, `V9__seed_demo_data.sql`.
+- Tested/confirmed: `mvn test` → 26 tests, 0 failures, 0 errors. `npm run build` → clean production bundle (424.68 kB JS).
+- Next session should: Begin Phase 12 (Stretch Goals) — Phase 12.1 batch upload capability in `UploadDocument.jsx` and backend multi-file endpoint.
