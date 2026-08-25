@@ -144,4 +144,29 @@ class DocumentServiceTest {
         assertNull(reprocessed.getFailedReason());
         verify(documentProcessingService).processDocumentAsync(failedDoc);
     }
+
+    @Test
+    @DisplayName("uploadDocuments batch stores multiple files, persists documents, and triggers async processing")
+    void testUploadDocumentsBatch() throws Exception {
+        MockMultipartFile file1 = new MockMultipartFile("files", "inv1.pdf", "application/pdf", "dummy 1".getBytes());
+        MockMultipartFile file2 = new MockMultipartFile("files", "inv2.pdf", "application/pdf", "dummy 2".getBytes());
+
+        when(userRepository.findById(10)).thenReturn(Optional.of(user));
+        when(storageService.store(file1)).thenReturn("/uploads/inv1.pdf");
+        when(storageService.store(file2)).thenReturn("/uploads/inv2.pdf");
+
+        Document doc1 = new Document(workspace, DocumentType.INVOICE, "/uploads/inv1.pdf", DocumentStatus.PENDING);
+        setEntityId(doc1, 201);
+        Document doc2 = new Document(workspace, DocumentType.INVOICE, "/uploads/inv2.pdf", DocumentStatus.PENDING);
+        setEntityId(doc2, 202);
+
+        when(documentRepository.saveAll(any())).thenReturn(List.of(doc1, doc2));
+
+        List<Document> result = documentService.uploadDocuments(10, DocumentType.INVOICE, List.of(file1, file2));
+
+        assertEquals(2, result.size());
+        assertEquals(201, result.get(0).getId());
+        assertEquals(202, result.get(1).getId());
+        verify(documentProcessingService, times(2)).processDocumentAsync(any(Document.class));
+    }
 }

@@ -166,6 +166,24 @@ public class DocumentController {
     }
 
     /**
+     * Batch uploads multiple documents to the current user's workspace.
+     *
+     * @param type           the DocumentType enum (e.g. INVOICE, CONTRACT, RESUME)
+     * @param files          list of MultipartFiles to upload (up to 10)
+     * @param authentication the authenticated user's details
+     * @return list of saved Document entities
+     */
+    @PostMapping(value = "/batch", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<List<Document>> uploadBatch(
+            @RequestParam("type") DocumentType type,
+            @RequestParam("files") List<MultipartFile> files,
+            Authentication authentication) {
+        Integer userId = (Integer) authentication.getPrincipal();
+        List<Document> documents = documentService.uploadDocuments(userId, type, files);
+        return ResponseEntity.ok(documents);
+    }
+
+    /**
      * Fetches the Gemini-extracted structured fields for a document, if any.
      */
     @GetMapping("/{id}/extraction")

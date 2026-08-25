@@ -84,6 +84,50 @@ public class DocumentService {
         return doc;
     }
 
+    /**
+     * Batch uploads multiple documents to the current user's workspace.
+     * Each file is validated, stored, and queued for asynchronous OCR & extraction processing.
+     *
+     * @param userId the authenticated user's ID
+     * @param type   the DocumentType of the batch
+     * @param files  list of MultipartFiles (up to 10 files per batch)
+     * @return list of saved Document entities with PENDING status
+     */
+    @Transactional
+    public List<Document> uploadDocuments(Integer userId, DocumentType type, List<MultipartFile> files) {
+        if (files == null || files.isEmpty()) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "EMPTY_BATCH", "No files provided in batch upload");
+        }
+        if (files.size() > 10) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "BATCH_TOO_LARGE", "Maximum 10 files allowed per batch upload");
+        }
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "USER_NOT_FOUND", "User not found"));
+
+        List<Document> documents = new java.util.ArrayList<>();
+        for (MultipartFile file : files) {
+            if (file == null || file.isEmpty()) {
+                continue;
+            }
+            String fileUrl = storageService.store(file);
+            Document doc = new Document(user.getWorkspace(), type, fileUrl, DocumentStatus.PENDING);
+            documents.add(doc);
+        }
+
+        if (documents.isEmpty()) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "EMPTY_FILES", "All uploaded files were empty");
+        }
+
+        List<Document> savedDocs = documentRepository.saveAll(documents);
+
+        for (Document doc : savedDocs) {
+            documentProcessingService.processDocumentAsync(doc);
+        }
+
+        return savedDocs;
+    }
+
     public List<Document> getDocumentsForWorkspace(Integer userId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "USER_NOT_FOUND", "User not found"));
