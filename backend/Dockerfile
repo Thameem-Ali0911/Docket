@@ -16,8 +16,9 @@ FROM eclipse-temurin:25-jre
 WORKDIR /app
 
 # Native Tesseract engine + English trained data, required by Tess4J (see architecture.md §8)
+# Plus wget and curl for container health checks
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends tesseract-ocr \
+    && apt-get install -y --no-install-recommends tesseract-ocr wget curl \
     && rm -rf /var/lib/apt/lists/*
 ENV TESSDATA_PREFIX=/usr/share/tesseract-ocr/5/tessdata
 

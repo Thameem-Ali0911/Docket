@@ -153,4 +153,13 @@ class AuthServiceTest {
         assertEquals("ACCOUNT_LOCKED", ex.getCode());
         verify(userRepository, never()).findByEmail(anyString());
     }
+
+    @Test
+    @DisplayName("Verify BCrypt hash for Demo1234! matches accurately")
+    void testDemoPasswordHash() {
+        org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder encoder = 
+                new org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder();
+        String hash = "$2a$10$sBRs4Oyo57t6siwkred.3uvnWVoMvlxdmjllIph/vSl88fdqNdkFK";
+        assertTrue(encoder.matches("Demo1234!", hash));
+    }
 }

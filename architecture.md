@@ -129,7 +129,10 @@ docket/
 ├── phases.md
 ├── design.md
 ├── memory.md
+├── DEMO_SCRIPT.md            # 5-minute evaluator & judge walkthrough click-path
 ├── README.md
+├── docker-compose.yml
+├── .env.example
 │
 ├── frontend/
 │   ├── src/
@@ -143,55 +146,59 @@ docket/
 │   │   │   ├── UploadDocument.jsx
 │   │   │   └── TemplateManager.jsx
 │   │   ├── components/
-│   │   │   ├── layout/           # Navbar, Sidebar, PageShell
-│   │   │   ├── documents/        # DocumentCard, DocumentTable, StatusBadge
-│   │   │   ├── extraction/       # FieldTable, SummaryCard, AnomalyFlag
-│   │   │   └── ui/                # shared buttons, inputs, modal (design.md tokens)
-│   │   ├── hooks/                # useAuth, useDocuments, useUpload
-│   │   ├── lib/                  # api client, query client setup
-│   │   ├── types/                # shared JS shape helpers/JSDoc typedefs (mirrors backend schemas)
-│   │   └── styles/                # tailwind.css, theme tokens
+│   │   │   ├── layout/           # Navbar, Frosted Nav
+│   │   │   ├── ui/               # AmbientAurora, Neo Cards, Buttons
+│   │   │   └── AnomalyFlag.jsx   # Severity badges and descriptions
+│   │   ├── lib/                  # api client, auth tokens, downloadExport, fetchBlobUrl, apiPatch
+│   │   └── styles/               # index.css (Neomorphic design tokens, Aurora variables)
 │   ├── index.html
-│   ├── tailwind.config.js
 │   └── package.json
 │
 ├── backend/
 │   ├── src/
 │   │   ├── main/
 │   │   │   ├── java/com/docket/
-│   │   │   │   ├── DocketApplication.java        # Spring Boot entrypoint
+│   │   │   │   ├── DocketApplication.java        # Spring Boot entrypoint (@EnableScheduling, @EnableAsync)
 │   │   │   │   ├── config/
-│   │   │   │   │   ├── SecurityConfig.java        # Spring Security + JWT filter chain
-│   │   │   │   │   └── WebClientConfig.java       # RestClient/WebClient bean for Gemini API
+│   │   │   │   │   ├── SecurityConfig.java        # Spring Security + JWT filter chain + Swagger permit
+│   │   │   │   │   └── OpenApiConfig.java         # springdoc-openapi Swagger UI + Bearer JWT scheme
 │   │   │   │   ├── controller/
 │   │   │   │   │   ├── AuthController.java        # /api/auth/*
-│   │   │   │   │   ├── DocumentController.java    # /api/documents/*
-│   │   │   │   │   ├── TemplateController.java    # /api/templates/*
-│   │   │   │   │   └── WorkspaceController.java   # /api/workspace/*
+│   │   │   │   │   ├── DocumentController.java    # /api/documents/* (incl. file stream, patch extraction, usage)
+│   │   │   │   │   └── TemplateController.java    # /api/templates/*
 │   │   │   │   ├── entity/                         # JPA entities
 │   │   │   │   │   ├── User.java
 │   │   │   │   │   ├── Workspace.java
 │   │   │   │   │   ├── Document.java
-│   │   │   │   │   ├── Extraction.java
+│   │   │   │   │   ├── Extraction.java            # AI fields + human_corrected_json audit
 │   │   │   │   │   ├── Template.java
-│   │   │   │   │   └── AnomalyFlag.java
+│   │   │   │   │   ├── AnomalyFlag.java
+│   │   │   │   │   └── LlmUsage.java              # Daily LLM invocation tracking
 │   │   │   │   ├── repository/                     # Spring Data JPA repositories
 │   │   │   │   │   ├── UserRepository.java
 │   │   │   │   │   ├── DocumentRepository.java
-│   │   │   │   │   └── ...
+│   │   │   │   │   ├── ExtractionRepository.java
+│   │   │   │   │   ├── SummaryRepository.java
+│   │   │   │   │   ├── AnomalyFlagRepository.java
+│   │   │   │   │   ├── TemplateRepository.java
+│   │   │   │   │   └── LlmUsageRepository.java    # Atomic PostgreSQL ON CONFLICT upserts
 │   │   │   │   ├── dto/                             # request/response + LLM-output DTOs
 │   │   │   │   │   ├── auth/
-│   │   │   │   │   ├── document/
-│   │   │   │   │   ├── InvoiceExtractionDto.java    # strict schema for invoice extraction JSON
+│   │   │   │   │   ├── document/                  # DocumentListItemDto, DocumentExportDto
+│   │   │   │   │   ├── extraction/                # ExtractionCorrectionRequest
+│   │   │   │   │   ├── InvoiceExtractionDto.java
 │   │   │   │   │   ├── ContractExtractionDto.java
 │   │   │   │   │   └── ResumeExtractionDto.java
 │   │   │   │   ├── service/
-│   │   │   │   │   ├── OcrService.java              # Tess4J + PDFBox logic
-│   │   │   │   │   ├── ExtractionService.java        # Gemini call: extract fields
-│   │   │   │   │   ├── SummarizeService.java         # Gemini call: summarize
-│   │   │   │   │   ├── AnomalyService.java           # Gemini call: compare vs template
-│   │   │   │   │   ├── StorageService.java           # file upload/retrieve (local disk / S3)
-│   │   │   │   │   └── GeminiClient.java             # thin wrapper around Gemini REST API
+│   │   │   │   │   ├── OcrService.java
+│   │   │   │   │   ├── ExtractionService.java        # Generic type-dispatched Gemini engine
+│   │   │   │   │   ├── SummarizeService.java
+│   │   │   │   │   ├── AnomalyService.java
+│   │   │   │   │   ├── ExportService.java            # CSV & JSON serializer
+│   │   │   │   │   ├── StorageService.java           # Interface + LocalStorageServiceImpl
+│   │   │   │   │   ├── LlmBudgetService.java         # Denial-of-wallet daily budget enforcer
+│   │   │   │   │   ├── DocumentReconciliationScheduler.java # Auto-reprocess stuck PENDING docs
+│   │   │   │   │   └── GeminiClient.java             # Exponential backoff retry loop
 │   │   │   │   ├── prompt/
 │   │   │   │   │   ├── ExtractInvoicePrompt.java
 │   │   │   │   │   ├── ExtractContractPrompt.java
@@ -199,23 +206,20 @@ docket/
 │   │   │   │   │   ├── SummarizePrompt.java
 │   │   │   │   │   └── AnomalyCheckPrompt.java
 │   │   │   │   ├── security/
-│   │   │   │   │   ├── JwtService.java               # token generation/validation
-│   │   │   │   │   └── JwtAuthFilter.java            # per-request auth filter
+│   │   │   │   │   ├── JwtService.java
+│   │   │   │   │   ├── JwtAuthFilter.java
+│   │   │   │   │   ├── LoginRateLimiter.java         # 5 attempts / 15 min brute-force guard
+│   │   │   │   │   └── CorrelationIdFilter.java      # MDC X-Request-ID tracking
 │   │   │   │   └── exception/
-│   │   │   │       ├── GlobalExceptionHandler.java   # @ControllerAdvice
+│   │   │   │       ├── GlobalExceptionHandler.java   # @ControllerAdvice structured errors
 │   │   │   │       └── ApiException.java
 │   │   │   └── resources/
 │   │   │       ├── application.yml
-│   │   │       ├── application-dev.yml
-│   │   │       └── db/migration/                     # Flyway SQL migration files
-│   │   │           └── V1__init_schema.sql
+│   │   │       └── db/migration/                     # Flyway SQL migration files (V1 -> V9)
 │   │   └── test/
-│   │       └── java/com/docket/                       # JUnit + Spring Boot Test suite
-│   ├── pom.xml                                          # or build.gradle if using Gradle
-│   └── .env.example                                     # reference only — real config lives in application-*.yml
-│
-└── docs/
-    └── sample-documents/          # anonymized/synthetic test files
+│   │       └── java/com/docket/                       # 25 JUnit 5 / Mockito tests
+│   ├── pom.xml
+│   └── Dockerfile
 ```
 
 ## 5. Data Model (Core Tables)

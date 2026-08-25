@@ -192,58 +192,79 @@ Frontend runs on `http://localhost:5173` by default (Vite's default port).
 
 ⚠️ Never commit real values for any of the above — only commit `.example` files with placeholders (see `rules.md` §5).
 
+## Quick Demo & Evaluation Walkthrough
+
+Docket includes an automated seed migration (Flyway V9) that populates an instant evaluation environment:
+
+| Access Point | Details |
+|---|---|
+| **App URL** | `http://localhost:5173` |
+| **Demo User** | `demo@docket.ai` |
+| **Demo Password** | `Demo1234!` |
+| **Swagger UI** | `http://localhost:8080/swagger-ui.html` (Interactive API Docs) |
+| **Health Check** | `http://localhost:8080/actuator/health` (DB & system health) |
+| **Walkthrough** | See [`DEMO_SCRIPT.md`](./DEMO_SCRIPT.md) for the full 5-minute evaluation click-path |
+
 ## Core Features
 
-- 🔐 **Auth & Workspaces** — email/password signup, JWT sessions, one workspace per business
-- 📤 **Document Upload** — PDF/PNG/JPG up to 10MB, tagged by type (Contract / Invoice / Resume)
-- 🔎 **OCR + Text Extraction** — digital PDF text extraction with automatic OCR fallback for scans
-- 🧠 **LLM Field Extraction** — structured JSON output per document type, grounded in the source text (no hallucinated fields)
-- 📝 **Summarization** — plain-English summary for every processed document
-- ⚠️ **Anomaly Flagging** — compares new documents against a saved "standard template" and explains deviations
-- 📊 **Dashboard** — filter by type/status/date, view extracted fields + summary + flags side-by-side with the original file
-- 📥 **Export** — per-document or bulk CSV/JSON export
-
-Full feature spec: [`prd.md`](./prd.md).
+- 🔐 **Auth & Workspace Isolation** — email/password signup, JWT sessions, multi-tenant workspace isolation on all data queries
+- 📤 **Document Upload** — PDF/PNG/JPG up to 10MB, typed by Contract / Invoice / Resume
+- 🔎 **OCR + Text Extraction** — digital PDF text extraction with automatic Tess4J OCR fallback for scans
+- 🧠 **LLM Field Extraction** — structured JSON output per document type with Bean Validation schema grounding
+- 📝 **Summarization** — plain-English executive summary for every processed document
+- ⚠️ **Anomaly Flagging** — compares documents against a saved "standard template" and highlights policy deviations
+- ✍️ **Human-in-the-Loop Field Correction** — inline JSON correction editor with zero-loss audit trails (`PATCH /api/documents/{id}/extraction`)
+- 🛡️ **Denial-of-Wallet Budget Guard** — atomic per-workspace daily LLM invocation quotas and progress tracking
+- 📊 **Neomorphic Dashboard** — filter by type/status/date, real-time status polling, single and bulk CSV/JSON export
+- 📖 **Interactive OpenAPI / Swagger** — OpenAPI 3.0 specs and Swagger UI with Bearer JWT test harness
 
 ## API Overview
 
-Representative endpoints (see backend controllers for full detail):
+Interactive documentation with live request execution is available at **`/swagger-ui.html`**.
 
-```
-POST   /api/auth/signup
-POST   /api/auth/login
-GET    /api/documents
-POST   /api/documents/upload
-GET    /api/documents/{id}
-POST   /api/templates
-GET    /api/templates/{type}
-GET    /api/documents/{id}/export
-```
-
-Consider adding `springdoc-openapi` for an auto-generated Swagger UI at `/swagger-ui.html` during development.
+| Method | Endpoint | Description | Auth |
+|---|---|---|---|
+| `POST` | `/api/auth/signup` | Register user & workspace | Public |
+| `POST` | `/api/auth/login` | Login & receive JWT | Public |
+| `GET`  | `/api/auth/me` | Current user & workspace profile | JWT |
+| `GET`  | `/api/documents` | List workspace documents with anomaly count | JWT |
+| `GET`  | `/api/documents/page` | Paginated workspace document list | JWT |
+| `POST` | `/api/documents/upload` | Upload & async process document | JWT |
+| `GET`  | `/api/documents/{id}` | Get single document enriched details | JWT |
+| `GET`  | `/api/documents/{id}/file` | Stream secure authenticated file preview | JWT |
+| `GET`  | `/api/documents/{id}/extraction` | Get Gemini extracted fields | JWT |
+| `PATCH`| `/api/documents/{id}/extraction` | Save human field corrections | JWT |
+| `GET`  | `/api/documents/{id}/summary` | Get document plain-English summary | JWT |
+| `GET`  | `/api/documents/{id}/anomalies` | Get detected template anomalies | JWT |
+| `POST` | `/api/documents/{id}/reprocess` | Manually re-trigger OCR/LLM pipeline | JWT |
+| `GET`  | `/api/documents/usage` | Today's LLM usage count for workspace | JWT |
+| `GET`  | `/api/documents/{id}/export` | Export single document (CSV / JSON) | JWT |
+| `GET`  | `/api/documents/export` | Bulk export workspace dataset (CSV / JSON) | JWT |
+| `POST` | `/api/templates` | Set standard baseline template | JWT |
+| `GET`  | `/api/templates/{type}` | Get standard template for document type | JWT |
+| `GET`  | `/actuator/health` | Spring Boot Actuator health status | Public |
 
 ## Project Documentation
 
-This repo is built around six living documents that stay in sync with the codebase throughout the project's lifecycle:
+This repo is built around living documentation files:
 
 | File | Purpose |
 |---|---|
+| [`DEMO_SCRIPT.md`](./DEMO_SCRIPT.md) | 5-minute evaluator & judge click-path walkthrough |
 | [`prd.md`](./prd.md) | What to build, target users, features, non-goals |
 | [`architecture.md`](./architecture.md) | Stack, app flow, folder structure, data model, prerequisites |
-| [`rules.md`](./rules.md) | Approved libraries, error handling, AI/LLM boundaries, what to avoid |
-| [`phases.md`](./phases.md) | The 12-phase build plan with a Definition of Done per phase |
-| [`design.md`](./design.md) | Color palette, typography, component conventions |
-| [`memory.md`](./memory.md) | Running log of progress, decisions, and session history |
-
-**If you're picking this project back up (or handing it to an AI coding assistant):** read `memory.md` first to see current status, then `phases.md` to confirm the active phase, before writing any code.
+| [`rules.md`](./rules.md) | Coding rules, approved libraries, AI/LLM boundaries |
+| [`phases.md`](./phases.md) | The 12-phase build plan with Definition of Done per phase |
+| [`design.md`](./design.md) | Neomorphic design tokens, color palette, component specs |
+| [`memory.md`](./memory.md) | Complete running log of progress and session history |
 
 ## Build Phases
 
-The project is broken into 12 phases (see `phases.md` for full detail):
+The project is structured in 12 phases (see `phases.md`):
 
 0. Project Setup
 1. Auth & Workspace
-2. Document Upload (Invoice, first vertical slice)
+2. Document Upload (Invoice)
 3. OCR + Text Extraction Pipeline
 4. LLM Field Extraction (Invoice)
 5. Summarization
@@ -254,15 +275,13 @@ The project is broken into 12 phases (see `phases.md` for full detail):
 9. Production Hardening & Evaluation Remediation
 10. Advanced Polish, Human-in-the-Loop & API Governance
 11. Deployment & Demo Readiness
-12. *(Stretch)* Batch upload, confidence scores, job queue, billing simulation, 4th document type, trend anomaly detection
-
-Current status: see [`memory.md`](./memory.md).
+12. *(Stretch)* Batch upload, confidence scores, job queue, billing simulation, trend anomaly detection
 
 ## Testing
 
-- **Backend:** JUnit 5 + Spring Boot Test + Mockito
-- **Frontend:** Vitest + React Testing Library
-- Sample/test documents live in `docs/sample-documents/` — synthetic or anonymized public templates only, never real client data (see `rules.md` §5)
+- **Backend:** JUnit 5 + Spring Boot Test + Mockito (`cd backend && ./mvnw test`) — 25 unit/integration tests covering auth, tenant isolation, rate limiting, and LLM budget guards.
+- **Frontend:** Vite production builds (`cd frontend && npm run build`).
+- **CI Pipeline:** GitHub Actions (`.github/workflows/ci.yml`) runs full test suite and frontend compilation on every push/PR.
 
 ## Known Limitations
 
