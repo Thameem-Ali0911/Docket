@@ -11,6 +11,8 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
+import io.swagger.v3.oas.annotations.Hidden;
+
 /**
  * Global exception handler. Returns a consistent JSON error shape for all errors:
  * <pre>
@@ -19,6 +21,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
  *
  * Per rules.md §4: never leak stack traces to the client.
  */
+@Hidden
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
