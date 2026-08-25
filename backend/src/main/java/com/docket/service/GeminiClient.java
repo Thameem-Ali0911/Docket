@@ -62,56 +62,87 @@ public class GeminiClient {
             throw new GeminiException("GEMINI_API_KEY is not configured.");
         }
 
-        try {
-            JsonNode schemaNode = objectMapper.readTree(jsonSchema);
+        int maxAttempts = 3;
+        long backoffMs = 1000;
 
-            ObjectNode requestBody = objectMapper.createObjectNode();
-            ObjectNode content = requestBody.putArray("contents").addObject();
-            content.putArray("parts").addObject().put("text", prompt);
+        for (int attempt = 1; attempt <= maxAttempts; attempt++) {
+            try {
+                JsonNode schemaNode = objectMapper.readTree(jsonSchema);
 
-            ObjectNode generationConfig = requestBody.putObject("generationConfig");
-            generationConfig.put("responseMimeType", "application/json");
-            generationConfig.set("responseSchema", schemaNode);
+                ObjectNode requestBody = objectMapper.createObjectNode();
+                ObjectNode content = requestBody.putArray("contents").addObject();
+                content.putArray("parts").addObject().put("text", prompt);
 
-            String requestJson = objectMapper.writeValueAsString(requestBody);
-            String url = String.format(ENDPOINT_TEMPLATE, model);
+                ObjectNode generationConfig = requestBody.putObject("generationConfig");
+                generationConfig.put("responseMimeType", "application/json");
+                generationConfig.set("responseSchema", schemaNode);
 
-            HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create(url))
-                .header("x-goog-api-key", apiKey)
-                .header("Content-Type", "application/json")
-                .timeout(Duration.ofSeconds(60))
-                .POST(HttpRequest.BodyPublishers.ofString(requestJson))
-                .build();
+                String requestJson = objectMapper.writeValueAsString(requestBody);
+                String url = String.format(ENDPOINT_TEMPLATE, model);
 
-            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+                HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create(url))
+                    .header("x-goog-api-key", apiKey)
+                    .header("Content-Type", "application/json")
+                    .timeout(Duration.ofSeconds(60))
+                    .POST(HttpRequest.BodyPublishers.ofString(requestJson))
+                    .build();
 
-            if (response.statusCode() < 200 || response.statusCode() >= 300) {
-                throw new GeminiException("Gemini API returned HTTP " + response.statusCode() + ": " + response.body());
+                HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+
+                int statusCode = response.statusCode();
+                if (statusCode >= 200 && statusCode < 300) {
+                    JsonNode root = objectMapper.readTree(response.body());
+                    JsonNode candidates = root.path("candidates");
+                    if (!candidates.isArray() || candidates.isEmpty()) {
+                        throw new GeminiException("Gemini response had no candidates: " + response.body());
+                    }
+                    JsonNode parts = candidates.get(0).path("content").path("parts");
+                    if (!parts.isArray() || parts.isEmpty()) {
+                        throw new GeminiException("Gemini response candidate had no content parts: " + response.body());
+                    }
+
+                    return parts.get(0).path("text").asText();
+                }
+
+                // Check if error is retriable (429 rate limit or 5xx server error)
+                boolean isRetriable = (statusCode == 429 || statusCode >= 500);
+                if (isRetriable && attempt < maxAttempts) {
+                    log.warn("Gemini API returned HTTP {} (attempt {} of {}). Retrying in {} ms...",
+                            statusCode, attempt, maxAttempts, backoffMs);
+                    Thread.sleep(backoffMs + (long) (Math.random() * 200));
+                    backoffMs *= 2;
+                    continue;
+                }
+
+                throw new GeminiException("Gemini API returned HTTP " + statusCode + ": " + response.body());
+
+            } catch (GeminiException e) {
+                if (attempt == maxAttempts) {
+                    throw e;
+                }
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                throw new GeminiException("Gemini call was interrupted: " + e.getMessage(), e);
+            } catch (Exception e) {
+                if (attempt < maxAttempts) {
+                    log.warn("Gemini API network error on attempt {} of {}: {}. Retrying in {} ms...",
+                            attempt, maxAttempts, e.getMessage(), backoffMs);
+                    try {
+                        Thread.sleep(backoffMs + (long) (Math.random() * 200));
+                    } catch (InterruptedException ie) {
+                        Thread.currentThread().interrupt();
+                        throw new GeminiException("Gemini call retry interrupted", ie);
+                    }
+                    backoffMs *= 2;
+                } else {
+                    log.error("Gemini API call failed after {} attempts", maxAttempts, e);
+                    throw new GeminiException("Failed to call Gemini API after retries: " + e.getMessage(), e);
+                }
             }
-
-            JsonNode root = objectMapper.readTree(response.body());
-            JsonNode candidates = root.path("candidates");
-            if (!candidates.isArray() || candidates.isEmpty()) {
-                throw new GeminiException("Gemini response had no candidates: " + response.body());
-            }
-            JsonNode parts = candidates.get(0).path("content").path("parts");
-            if (!parts.isArray() || parts.isEmpty()) {
-                throw new GeminiException("Gemini response candidate had no content parts: " + response.body());
-            }
-
-            return parts.get(0).path("text").asText();
-        } catch (GeminiException e) {
-            throw e;
-        } catch (InterruptedException e) {
-            // Restore the interrupt flag instead of swallowing it - letting it disappear
-            // makes the thread pool unable to respond correctly to shutdown/cancellation.
-            Thread.currentThread().interrupt();
-            throw new GeminiException("Gemini call was interrupted: " + e.getMessage(), e);
-        } catch (Exception e) {
-            log.error("Gemini API call failed", e);
-            throw new GeminiException("Failed to call Gemini API: " + e.getMessage(), e);
         }
+
+        throw new GeminiException("Gemini API call failed after " + maxAttempts + " attempts.");
     }
 
     public static class GeminiException extends Exception {

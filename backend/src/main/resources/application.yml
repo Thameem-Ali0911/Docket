@@ -10,10 +10,10 @@ spring:
   jpa:
     hibernate:
       ddl-auto: none
-    show-sql: true
+    show-sql: ${SHOW_SQL:false}
     properties:
       hibernate:
-        format_sql: true
+        format_sql: ${FORMAT_SQL:false}
   flyway:
     enabled: true
     locations: classpath:db/migration
@@ -25,5 +25,14 @@ gemini:
   model: ${GEMINI_MODEL:gemini-3.5-flash-lite}
 server:
   port: 8080
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: always
 
 storage.upload-dir: ${STORAGE_UPLOAD_DIR:/app/uploads}

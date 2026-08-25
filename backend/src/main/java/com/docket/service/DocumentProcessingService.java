@@ -65,11 +65,8 @@ public class DocumentProcessingService {
                 } else {
                     // PostgreSQL's text columns cannot store a NUL byte (0x00) under any
                     // encoding - some PDFs (particularly ones with unusual embedded/custom
-                    // font encodings) yield a text-layer extraction that contains one, which
-                    // previously blew up the save below with no error handling around it at
-                    // all. Stripping NULs here is safe: they're never meaningful in extracted
-                    // invoice text and this keeps the save from failing on otherwise-valid text.
-                    doc.setExtractedText(stripNulBytes(extractedText));
+                    // font encodings) yield a text-layer extraction that contains one.
+                    doc.setExtractedText(com.docket.util.SanitizationUtils.stripNulBytes(extractedText));
                     doc.setStatus(DocumentStatus.PROCESSED);
                 }
             } else {
@@ -93,22 +90,16 @@ public class DocumentProcessingService {
             return;
         }
 
-        // Phase 4 / Phase 7: run structured field extraction for successfully-OCR'd documents.
-        // Dispatch to the appropriate extractor based on document type.
+        // Run structured field extraction for successfully-OCR'd documents.
         if (doc.getStatus() == DocumentStatus.PROCESSED) {
             try {
-                switch (doc.getType()) {
-                    case INVOICE  -> extractionService.extractInvoiceFields(doc);
-                    case CONTRACT -> extractionService.extractContractFields(doc);
-                    case RESUME   -> extractionService.extractResumeFields(doc);
-                    default       -> log.warn("No extractor defined for type={}", doc.getType());
-                }
+                extractionService.extractDocumentFields(doc);
             } catch (Throwable t) {
                 log.error("Field extraction failed for document id={}", doc.getId(), t);
             }
         }
 
-        // Phase 5: run summarization for all successfully-OCR'd documents.
+        // Run summarization for all successfully-OCR'd documents.
         if (doc.getStatus() == DocumentStatus.PROCESSED) {
             try {
                 summarizeService.summarizeDocument(doc);
@@ -116,7 +107,7 @@ public class DocumentProcessingService {
                 log.error("Summarization failed for document id={}", doc.getId(), t);
             }
             
-            // Phase 6: run anomaly checks against the workspace template
+            // Run anomaly checks against the workspace template
             try {
                 anomalyService.checkAnomalies(doc);
             } catch (Throwable t) {
@@ -128,16 +119,5 @@ public class DocumentProcessingService {
     private String summarize(Throwable t) {
         String message = t.getMessage();
         return t.getClass().getSimpleName() + (message != null ? ": " + message : "");
-    }
-
-    /**
-     * Removes NUL (0x00) characters from extracted text. PostgreSQL's text/UTF8 columns
-     * reject NUL bytes outright regardless of encoding, so any extraction that happens to
-     * contain one (seen in practice with PDFs using unusual embedded font encodings) would
-     * otherwise fail the save with a DataIntegrityViolationException every single time,
-     * permanently blocking that document from ever reaching PROCESSED.
-     */
-    private String stripNulBytes(String text) {
-        return text.indexOf('\u0000') == -1 ? text : text.replace("\u0000", "");
     }
 }

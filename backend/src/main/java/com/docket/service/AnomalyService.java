@@ -85,9 +85,9 @@ public class AnomalyService {
             if (dto.flags() != null) {
                 for (var flagDto : dto.flags()) {
                     AnomalyFlag flag = new AnomalyFlag(document,
-                            stripNulBytes(flagDto.fieldName()),
-                            stripNulBytes(flagDto.description()),
-                            stripNulBytes(flagDto.severity()));
+                            com.docket.util.SanitizationUtils.stripNulBytes(flagDto.fieldName()),
+                            com.docket.util.SanitizationUtils.stripNulBytes(flagDto.description()),
+                            com.docket.util.SanitizationUtils.stripNulBytes(flagDto.severity()));
                     anomalyFlagRepository.save(flag);
                 }
             }
@@ -99,10 +99,5 @@ public class AnomalyService {
         } catch (Throwable t) {
             log.error("Unexpected error during anomaly check for document id={}", document.getId(), t);
         }
-    }
-
-    private String stripNulBytes(String text) {
-        if (text == null) return null;
-        return text.indexOf('\u0000') == -1 ? text : text.replace("\u0000", "");
     }
 }

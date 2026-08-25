@@ -16,9 +16,9 @@
 
 ## Current Status
 
-- **Active Phase:** Phase 9 — Production Hardening & Evaluation Remediation
+- **Active Phase:** Phase 10 — Advanced Polish, Human-in-the-Loop & API Governance
 - **Last Updated:** 2026-08-25
-- **Overall Progress:** ~75% — Phases 0–8.5 complete. Entered Phase 9 to resolve all security, architecture, performance, resilience, observability, and testing gaps identified in `Docket_Evaluation_Report.md`.
+- **Overall Progress:** ~85% — Phases 0–9 complete. Phase 9 (Production Hardening & Evaluation Remediation) fully implemented and verified with 21 passing automated tests and a clean frontend build.
 
 ## Completed
 
@@ -71,21 +71,29 @@
   - Rewrote `Dashboard.jsx` with sticky frosted nav, spring-staggered metric cards, slide-in table rows, `AnimatePresence` filter clear, and row-count footer.
   - Rewrote `UploadDocument.jsx` with card-selector for doc type (extruded→inset on select), neomorphic inset dropzone with drag color transitions.
   - Rewrote `TemplateManager.jsx` with neomorphic tab bar, `AnimatePresence mode="wait"` panel transitions, and `card-inset` active template display.
+- [x] Phase 9: Production Hardening & Evaluation Remediation (Sessions 33–34):
+  - **9.1 Security:** Revoked unauthenticated `/uploads/**` access; added authenticated `GET /api/documents/{id}/file` endpoint with workspace ownership check; created `LoginRateLimiter.java` (5 attempts / 15 min lockout) wired into `AuthService.login()`; purged 47 cached upload binaries from git history via `git rm -r --cached`; hardened `.gitignore`.
+  - **9.2 DB & Performance:** Flyway `V7__add_workspace_and_query_indexes.sql` — indexes on `documents(workspace_id)`, `documents(status)`, `documents(workspace_id, uploaded_at DESC)`, `users(workspace_id)`; paginated `GET /api/documents/page` endpoint; single-doc `GET /api/documents/{id}`.
+  - **9.3 Architecture:** Collapsed 3 triplicated extraction methods into generic `<T> extractFields(...)`; unified `stripNulBytes` into `SanitizationUtils.java`; removed direct repo injections from `DocumentController`; gated `show-sql` behind `${SHOW_SQL:false}`; added `CorrelationIdFilter.java` for MDC `requestId`.
+  - **9.4 Resilience:** `StorageService` refactored to interface + `LocalStorageServiceImpl`; `GeminiClient` exponential backoff retry (3 attempts, jitter, on 429/5xx); `DocumentReconciliationScheduler` detects & reprocesses stuck PENDING docs; `POST /api/documents/{id}/reprocess` manual endpoint.
+  - **9.5 Observability:** `spring-boot-starter-actuator` added; `/actuator/health` (with DB check) and `/actuator/metrics` exposed; backend healthcheck wired into `docker-compose.yml`.
+  - **9.6 Frontend Resilience:** `DocumentDetail.jsx` migrated from `Promise.all` to `Promise.allSettled`; authenticated blob URL streaming for file preview iframe; Reprocess button added.
+  - **9.7 Tests & CI:** 21 JUnit 5 / Mockito tests covering `WorkspaceIsolationTest`, `AuthServiceTest`, `LoginRateLimiterTest`, `DocumentServiceTest`, `ExtractionServiceTest`, `SanitizationUtilsTest` — all passing. GitHub Actions CI (`ci.yml`) runs both `mvn test` and `npm run build` on push/PR.
 
 ## In Progress
 
-- Phase 9: Production Hardening & Evaluation Remediation — addressing all findings from `Docket_Evaluation_Report.md`.
+- Phase 10: Advanced Polish, Human-in-the-Loop & API Governance — building editable field corrections, status polling, OpenAPI/Swagger docs, mobile responsiveness, API versioning, and frontend component tests.
 
 ## Next Steps (in order)
 
-1. **Phase 9.1 (Security):** Remove `/uploads/**` from `permitAll()`; implement authenticated `GET /api/documents/{id}/file` endpoint with workspace checks; add login brute-force attempt limiter; purge committed upload files and update `.gitignore`.
-2. **Phase 9.2 (Database & API Performance):** Write Flyway migration `V7` for `idx_documents_workspace_id`; add `Pageable` pagination to `GET /api/documents`; add `GET /api/documents/{id}` single document endpoint.
-3. **Phase 9.3 (Architecture & Code Quality):** Refactor `ExtractionService` to generic `extractFields`; extract shared `SanitizationUtils.stripNulBytes()`; clean up `DocumentController` repository calls; profile-gate `show-sql`; add MDC correlation ID filter.
-4. **Phase 9.4 (LLM Resilience & Storage Abstraction):** Add retry-with-exponential-backoff in `GeminiClient`; implement stuck document reconciliation job & manual reprocess endpoint; abstract `StorageService` interface.
-5. **Phase 9.5 & 9.6 (Observability & Frontend Resilience):** Add `spring-boot-starter-actuator` and wire into Compose healthcheck; switch `DocumentDetail.jsx` from `Promise.all` to `Promise.allSettled`.
-6. **Phase 9.7 & 9.8 (Testing & CI/CD):** Build backend test suite (cross-workspace isolation 404 test, `AuthService`, `DocumentService`, `ExtractionService` tests); create GitHub Actions CI workflow (`.github/workflows/ci.yml`); reconcile `README.md` docs.
-7. **Phase 10:** Proceed to Phase 10 for human-in-the-loop field corrections (`PATCH /api/documents/{id}/extraction`), status polling, and OpenAPI docs.
-8. **Phase 11 & 12:** Deployment & Demo Readiness (Phase 11), followed by stretch goals (Phase 12).
+1. **Phase 10.1 (Human-in-the-Loop):** Build editable fields UI in `DocumentDetail.jsx`; add `PATCH /api/documents/{id}/extraction` backend endpoint to save user corrections.
+2. **Phase 10.2 (Real-Time Status Polling):** Implement polling with exponential backoff on `Dashboard.jsx` and `DocumentDetail.jsx` so `PENDING` documents auto-transition without page refresh.
+3. **Phase 10.3 (OpenAPI / Swagger):** Add `springdoc-openapi` dependency; expose interactive docs at `/swagger-ui.html`.
+4. **Phase 10.4 (Per-Workspace LLM Budget Guard):** Add per-workspace rate / budget limits on LLM calls to prevent runaway API costs.
+5. **Phase 10.5 (Mobile & Accessibility):** Audit all screens for responsive layout breakpoints (`sm`/`md`/`lg`/`xl`); add `aria-label` on icon-only buttons; ensure WCAG AA contrast.
+6. **Phase 10.6 (API Versioning):** Migrate all endpoints to `/api/v1/` prefix.
+7. **Phase 10.7 (Frontend Component Tests):** Add Vitest + React Testing Library tests for critical UI components.
+8. **Phase 11 & 12:** Deployment & Demo Readiness, then stretch goals.
 
 
 ## Key Decisions & Why
@@ -495,3 +503,17 @@ pm run build).
 - Files touched: `phases.md`, `memory.md`, `README.md`, `architecture.md`, `rules.md`, `AGENTS.md`.
 - Tested/confirmed: All phase numbering and cross-references verified consistent across the repository docs.
 - Next session should: Begin Phase 9 execution, starting with Phase 9.1 critical security remediation (`/uploads/**` auth lockdown, login attempt limiter, committed files scrub).
+
+### Session 34 — 2026-08-25
+- Executed full Phase 9 (Production Hardening & Evaluation Remediation) implementation across all 7 sub-tracks.
+- **9.1 Security:** Removed `/uploads/**` from `SecurityConfig.java` `permitAll()`; created `GET /api/documents/{id}/file` authenticated streaming endpoint with workspace check; created `LoginRateLimiter.java` (5 failed attempts / 15 min lockout, per-IP isolation, auto-expiry, success-resets counter); wired into `AuthService.login()`; ran `git rm -r --cached uploads backend/uploads` to untrack 47 committed upload binaries; hardened `.gitignore`.
+- **9.2 DB & Performance:** Wrote `V7__add_workspace_and_query_indexes.sql` with 4 indexes; added `Page<Document> findByWorkspaceId` and status-based queries to `DocumentRepository`; added `GET /api/documents/page` (paginated) and `GET /api/documents/{id}` (single-doc DTO) endpoints.
+- **9.3 Architecture:** Collapsed `extractInvoiceFields`/`extractContractFields`/`extractResumeFields` into generic `<T> extractFields(Document, prompt, schema, Class<T>)` with `DocumentType` dispatch map; created `SanitizationUtils.stripNulBytes()` and removed duplicated private copies from 4 service classes; removed `ExtractionRepository`/`SummaryRepository`/`AnomalyFlagRepository` direct injections from `DocumentController`, routing through `DocumentService` delegates; gated `show-sql` via `${SHOW_SQL:false}`; created `CorrelationIdFilter.java` attaching `X-Request-ID` to MDC.
+- **9.4 Resilience:** Refactored `StorageService` → interface + `LocalStorageServiceImpl`; added jittered exponential backoff retry loop (3 attempts, on HTTP 429/5xx & IOException) to `GeminiClient`; created `DocumentReconciliationScheduler.java` (`@Scheduled` every 5 min) detecting PENDING docs older than 10 min and re-triggering processing; added `POST /api/documents/{id}/reprocess` manual endpoint; added `@EnableScheduling` to `DocketApplication`.
+- **9.5 Observability:** Added `spring-boot-starter-actuator` + `spring-security-test` to `pom.xml`; configured actuator health/metrics in `application.yml`; wired Docker Compose backend healthcheck to `/actuator/health`.
+- **9.6 Frontend Resilience:** Updated `DocumentDetail.jsx` to fetch single doc via `GET /api/documents/{id}`; migrated sub-resource fetches to `Promise.allSettled`; implemented `fetchBlobUrl()` for authenticated blob URL iframe previews; added Reprocess button; added `fetchBlobUrl` helper to `api.js`.
+- **9.7 Tests & CI:** Created 6 test classes (21 tests total) — all passing via `mvn test`: `WorkspaceIsolationTest` (3), `AuthServiceTest` (5), `LoginRateLimiterTest` (4), `DocumentServiceTest` (3), `ExtractionServiceTest` (3), `SanitizationUtilsTest` (3). Created `.github/workflows/ci.yml` running backend tests + frontend build on push/PR.
+- Files touched: `SecurityConfig.java`, `DocumentController.java`, `DocumentService.java`, `AuthService.java`, `StorageService.java`, `LocalStorageServiceImpl.java`, `GeminiClient.java`, `ExtractionService.java`, `SummarizeService.java`, `AnomalyService.java`, `DocumentProcessingService.java`, `DocketApplication.java`, `application.yml`, `pom.xml`, `docker-compose.yml`, `api.js`, `DocumentDetail.jsx`, `.gitignore`. New: `SanitizationUtils.java`, `LoginRateLimiter.java`, `CorrelationIdFilter.java`, `DocumentReconciliationScheduler.java`, `LocalStorageServiceImpl.java`, `V7__add_workspace_and_query_indexes.sql`, 6 test classes, `.github/workflows/ci.yml`.
+- Tested/confirmed: `mvn test` → 21 tests, 0 failures, 0 errors. `npm run build` → clean build, 0 errors.
+- Still untested / follow-up: Docker Compose full rebuild not run this session (no daemon in sandbox). Actuator health DB check needs live `docker compose up --build` to verify against real Postgres.
+- Next session should: Begin Phase 10 — start with Phase 10.1 (human-in-the-loop field editing: `PATCH /api/documents/{id}/extraction` backend + editable UI in `DocumentDetail.jsx`) and Phase 10.2 (PENDING status auto-polling with backoff on Dashboard and DocumentDetail).

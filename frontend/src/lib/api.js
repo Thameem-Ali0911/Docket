@@ -134,3 +134,34 @@ export async function downloadExport(path, defaultFilename = 'docket-export.json
     a.remove();
     window.URL.revokeObjectURL(url);
 }
+
+/**
+ * Fetches an authenticated file as a local Blob Object URL for iframe/preview rendering.
+ *
+ * @param {string} path — API path (e.g. "/api/documents/1/file")
+ * @returns {Promise<string>} Blob Object URL (caller should revokeObjectURL when done)
+ */
+export async function fetchBlobUrl(path) {
+    const token = getToken();
+    const headers = {};
+
+    if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+    }
+
+    const response = await fetch(`${API_BASE_URL}${path}`, { headers });
+
+    if (response.status === 401 || response.status === 403) {
+        clearToken();
+        window.location.href = '/login';
+        throw new Error(`Authentication failed (${response.status}). Please log in again.`);
+    }
+
+    if (!response.ok) {
+        throw new Error(`Failed to load file preview (${response.status})`);
+    }
+
+    const blob = await response.blob();
+    return window.URL.createObjectURL(blob);
+}
+

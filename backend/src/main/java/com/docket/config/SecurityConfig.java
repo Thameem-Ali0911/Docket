@@ -42,9 +42,10 @@ public class SecurityConfig {
                 .headers((headers) -> headers.frameOptions((frame) -> frame.disable()))
                 .authorizeHttpRequests((requests) -> requests
                         .requestMatchers("/api/health",
+                                         "/actuator/health",
+                                         "/actuator/info",
                                          "/api/auth/signup",
-                                         "/api/auth/login",
-                                         "/uploads/**").permitAll()
+                                         "/api/auth/login").permitAll()
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);

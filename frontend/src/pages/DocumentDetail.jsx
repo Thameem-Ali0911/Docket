@@ -1,12 +1,10 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { motion } from 'motion/react';
-import { ArrowLeft, Download, ExternalLink, FileText, Sparkles, AlertTriangle, CheckCircle2 } from 'lucide-react';
-import { apiFetch, clearToken, downloadExport } from '../lib/api';
+import { ArrowLeft, Download, ExternalLink, FileText, Sparkles, AlertTriangle, RotateCcw } from 'lucide-react';
+import { apiFetch, clearToken, downloadExport, fetchBlobUrl } from '../lib/api';
 import AnomalyFlag from '../components/AnomalyFlag';
 import AmbientAurora from '../components/ui/AmbientAurora';
-
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
 
 /**
  * Document detail page — "Aurora Obsidian" edition.
@@ -18,6 +16,7 @@ export default function DocumentDetail() {
     const navigate = useNavigate();
 
     const [document, setDocument] = useState(null);
+    const [blobUrl, setBlobUrl] = useState(null);
     const [fields, setFields] = useState(null);
     const [extractionFailedReason, setExtractionFailedReason] = useState(null);
     const [summary, setSummary] = useState(null);
@@ -25,26 +24,41 @@ export default function DocumentDetail() {
     const [anomalies, setAnomalies] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [reprocessing, setReprocessing] = useState(false);
 
     useEffect(() => {
+        let activeBlobUrl = null;
         setLoading(true);
         setError(null);
 
-        Promise.all([
-            apiFetch('/api/documents'),
-            apiFetch(`/api/documents/${id}/extraction`),
-            apiFetch(`/api/documents/${id}/summary`),
-            apiFetch(`/api/documents/${id}/anomalies`),
-        ])
-            .then(([documents, extraction, summaryResp, anomaliesResp]) => {
-                const doc = documents.find(d => String(d.id) === String(id));
-                if (!doc) {
-                    setError('Document not found.');
-                    return;
-                }
+        // Fetch document metadata first
+        apiFetch(`/api/documents/${id}`)
+            .then(doc => {
                 setDocument(doc);
 
-                if (extraction) {
+                // Fetch authenticated preview blob
+                fetchBlobUrl(`/api/documents/${id}/file`)
+                    .then(url => {
+                        activeBlobUrl = url;
+                        setBlobUrl(url);
+                    })
+                    .catch(err => {
+                        console.warn('Failed to load preview blob:', err);
+                    });
+
+                // Fetch intelligence sub-resources independently via Promise.allSettled
+                return Promise.allSettled([
+                    apiFetch(`/api/documents/${id}/extraction`),
+                    apiFetch(`/api/documents/${id}/summary`),
+                    apiFetch(`/api/documents/${id}/anomalies`),
+                ]);
+            })
+            .then(results => {
+                if (!results) return;
+                const [extractionRes, summaryRes, anomaliesRes] = results;
+
+                if (extractionRes.status === 'fulfilled' && extractionRes.value) {
+                    const extraction = extractionRes.value;
                     setExtractionFailedReason(extraction.failedReason || null);
                     if (extraction.fieldsJson) {
                         try {
@@ -55,13 +69,14 @@ export default function DocumentDetail() {
                     }
                 }
 
-                if (summaryResp) {
+                if (summaryRes.status === 'fulfilled' && summaryRes.value) {
+                    const summaryResp = summaryRes.value;
                     setSummaryFailedReason(summaryResp.failedReason || null);
                     setSummary(summaryResp.summaryText || null);
                 }
 
-                if (anomaliesResp) {
-                    setAnomalies(anomaliesResp);
+                if (anomaliesRes.status === 'fulfilled' && anomaliesRes.value) {
+                    setAnomalies(anomaliesRes.value);
                 }
             })
             .catch((err) => {
@@ -73,6 +88,12 @@ export default function DocumentDetail() {
                 setError(err.message || 'Failed to load document.');
             })
             .finally(() => setLoading(false));
+
+        return () => {
+            if (activeBlobUrl) {
+                window.URL.revokeObjectURL(activeBlobUrl);
+            }
+        };
     }, [id, navigate]);
 
     async function handleExport(format) {
@@ -80,6 +101,17 @@ export default function DocumentDetail() {
             await downloadExport(`/api/documents/${id}/export?format=${format}`, `document-${id}-export.${format}`);
         } catch (err) {
             alert(`Export failed: ${err.message}`);
+        }
+    }
+
+    async function handleReprocess() {
+        setReprocessing(true);
+        try {
+            await apiFetch(`/api/documents/${id}/reprocess`, { method: 'POST' });
+            window.location.reload();
+        } catch (err) {
+            alert(`Reprocess failed: ${err.message}`);
+            setReprocessing(false);
         }
     }
 
@@ -141,6 +173,18 @@ export default function DocumentDetail() {
                                 </p>
                             </div>
                             <div className="flex items-center gap-2.5">
+                                {(document?.status === 'FAILED' || document?.status === 'PENDING') && (
+                                    <button
+                                        onClick={handleReprocess}
+                                        disabled={reprocessing}
+                                        className="btn-secondary flex items-center gap-1.5 text-amber-300 hover:text-amber-200"
+                                        style={{ padding: '5px 12px', fontSize: '12px' }}
+                                        title="Trigger re-extraction and summarization"
+                                    >
+                                        <RotateCcw size={13} className={reprocessing ? "animate-spin" : ""} />
+                                        {reprocessing ? "Reprocessing…" : "Reprocess"}
+                                    </button>
+                                )}
                                 <button
                                     onClick={() => handleExport('csv')}
                                     className="btn-secondary"
@@ -180,21 +224,25 @@ export default function DocumentDetail() {
                             >
                                 <div className="px-4 py-3 flex items-center justify-between" style={{ borderBottom: '1px solid var(--color-border)', background: 'var(--color-surface-raised)' }}>
                                     <h3 className="text-sm font-semibold text-gray-300">Original File Preview</h3>
-                                    {document?.fileUrl && (
-                                        <a href={API_BASE_URL + document.fileUrl} target="_blank" rel="noreferrer"
+                                    {blobUrl && (
+                                        <a href={blobUrl} target="_blank" rel="noreferrer"
                                            className="text-xs font-semibold flex items-center gap-1 hover:text-cyan-300">
-                                            <span>Open tab</span>
+                                            <span>Open in new tab</span>
                                             <ExternalLink size={12} />
                                         </a>
                                     )}
                                 </div>
                                 <div style={{ height: '580px', background: '#0D0B14' }}>
-                                    {document?.fileUrl && (
+                                    {blobUrl ? (
                                         <iframe
                                             title="Document preview"
-                                            src={API_BASE_URL + document.fileUrl}
+                                            src={blobUrl}
                                             style={{ width: '100%', height: '100%', border: 'none' }}
                                         />
+                                    ) : (
+                                        <div className="h-full flex items-center justify-center text-sm text-gray-500">
+                                            Loading preview…
+                                        </div>
                                     )}
                                 </div>
                             </motion.div>

@@ -24,4 +24,8 @@ skills-lock.json
 .agents/
 .skills/
 
-uploads/*
+# Uploaded document files (security/privacy)
+uploads/
+backend/uploads/
+uploads/**
+backend/uploads/**

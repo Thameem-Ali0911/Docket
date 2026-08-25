@@ -1,27 +1,32 @@
 package com.docket.service;
 
-import jakarta.validation.ConstraintViolation;
-import jakarta.validation.Validation;
-import jakarta.validation.Validator;
-import jakarta.validation.ValidatorFactory;
-
 import java.util.Set;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
-import com.docket.dto.InvoiceExtractionDto;
 import com.docket.dto.ContractExtractionDto;
+import com.docket.dto.InvoiceExtractionDto;
 import com.docket.dto.ResumeExtractionDto;
 import com.docket.entity.Document;
 import com.docket.entity.Extraction;
-import com.docket.prompt.ExtractInvoicePrompt;
 import com.docket.prompt.ExtractContractPrompt;
+import com.docket.prompt.ExtractInvoicePrompt;
 import com.docket.prompt.ExtractResumePrompt;
 import com.docket.repository.ExtractionRepository;
+import com.docket.util.SanitizationUtils;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import jakarta.validation.ConstraintViolation;
+import jakarta.validation.Validation;
+import jakarta.validation.Validator;
+import jakarta.validation.ValidatorFactory;
+
+/**
+ * Service responsible for LLM-based structured field extraction across all document types.
+ * Utilizes generic validation and unified NUL-byte sanitization.
+ */
 @Service
 public class ExtractionService {
 
@@ -33,8 +38,8 @@ public class ExtractionService {
     private final Validator validator;
 
     public ExtractionService(GeminiClient geminiClient,
-                              ExtractionRepository extractionRepository,
-                              ObjectMapper objectMapper) {
+                             ExtractionRepository extractionRepository,
+                             ObjectMapper objectMapper) {
         this.geminiClient = geminiClient;
         this.extractionRepository = extractionRepository;
         this.objectMapper = objectMapper;
@@ -44,10 +49,10 @@ public class ExtractionService {
     }
 
     /**
-     * Extracts structured invoice fields for a document that already has OCR'd
-     * extractedText, and persists an Extraction row (success or failure reason).
+     * Generic extraction method parameterized by DTO type and prompt schema.
+     * Eliminates copy-paste triplication across document types.
      */
-    public void extractInvoiceFields(Document document) {
+    public <T> void extractFields(Document document, String prompt, String jsonSchema, Class<T> dtoClass) {
         String extractedText = document.getExtractedText();
         if (extractedText == null || extractedText.isBlank()) {
             saveFailure(document, "No extracted text available to run field extraction on.");
@@ -55,12 +60,12 @@ public class ExtractionService {
         }
 
         try {
-            String prompt = ExtractInvoicePrompt.buildPrompt(extractedText);
-            String rawJson = geminiClient.generateStructuredJson(prompt, ExtractInvoicePrompt.RESPONSE_SCHEMA_JSON);
+            String rawJson = geminiClient.generateStructuredJson(prompt, jsonSchema);
+            String sanitizedJson = SanitizationUtils.stripNulBytes(rawJson);
 
-            InvoiceExtractionDto dto = objectMapper.readValue(rawJson, InvoiceExtractionDto.class);
+            T dto = objectMapper.readValue(sanitizedJson, dtoClass);
 
-            Set<ConstraintViolation<InvoiceExtractionDto>> violations = validator.validate(dto);
+            Set<ConstraintViolation<T>> violations = validator.validate(dto);
             if (!violations.isEmpty()) {
                 String reasons = violations.stream()
                     .map(v -> v.getPropertyPath() + ": " + v.getMessage())
@@ -70,106 +75,46 @@ public class ExtractionService {
                 return;
             }
 
-            // Same NUL-byte issue as extractedText (see DocumentProcessingService) can show up
-            // here too, since Gemini may echo back snippets of the source text verbatim into
-            // the JSON fields it returns - sanitize before persisting for the same reason.
-            String sanitizedJson = stripNulBytes(rawJson);
             Extraction extraction = extractionRepository.findByDocumentId(document.getId())
                 .orElse(new Extraction(document, sanitizedJson));
             extraction.setFieldsJson(sanitizedJson);
             extraction.setFailedReason(null);
             extractionRepository.save(extraction);
+
         } catch (GeminiClient.GeminiException e) {
             saveFailure(document, "Gemini extraction failed: " + e.getMessage());
         } catch (Exception e) {
-            saveFailure(document, "Could not parse Gemini's response as valid invoice JSON: " + e.getMessage());
+            saveFailure(document, "Could not parse Gemini's response as valid JSON: " + e.getMessage());
         } catch (Throwable t) {
-            // Defense in depth: JSON parsing, validation, or serialization libraries could in
-            // principle throw an Error (e.g. StackOverflowError on a pathological response).
-            // Never let extraction die silently - always leave a visible failure record.
-            log.error("Unexpected failure during invoice field extraction for document id={}",
-                document.getId(), t);
+            log.error("Unexpected failure during field extraction for document id={}", document.getId(), t);
             saveFailure(document, "Unexpected extraction failure: " + t.getClass().getSimpleName());
         }
+    }
+
+    public void extractInvoiceFields(Document document) {
+        String prompt = ExtractInvoicePrompt.buildPrompt(document.getExtractedText());
+        extractFields(document, prompt, ExtractInvoicePrompt.RESPONSE_SCHEMA_JSON, InvoiceExtractionDto.class);
     }
 
     public void extractContractFields(Document document) {
-        String extractedText = document.getExtractedText();
-        if (extractedText == null || extractedText.isBlank()) {
-            saveFailure(document, "No extracted text available to run field extraction on.");
-            return;
-        }
-
-        try {
-            String prompt = ExtractContractPrompt.PROMPT_TEXT + "\n\nDocument text:\n" + extractedText;
-            String rawJson = geminiClient.generateStructuredJson(prompt, ExtractContractPrompt.JSON_SCHEMA);
-
-            ContractExtractionDto dto = objectMapper.readValue(rawJson, ContractExtractionDto.class);
-
-            Set<ConstraintViolation<ContractExtractionDto>> violations = validator.validate(dto);
-            if (!violations.isEmpty()) {
-                String reasons = violations.stream()
-                    .map(v -> v.getPropertyPath() + ": " + v.getMessage())
-                    .reduce((a, b) -> a + "; " + b)
-                    .orElse("validation failed");
-                saveFailure(document, "Gemini response failed validation: " + reasons);
-                return;
-            }
-
-            String sanitizedJson = stripNulBytes(rawJson);
-            Extraction extraction = extractionRepository.findByDocumentId(document.getId())
-                .orElse(new Extraction(document, sanitizedJson));
-            extraction.setFieldsJson(sanitizedJson);
-            extraction.setFailedReason(null);
-            extractionRepository.save(extraction);
-        } catch (GeminiClient.GeminiException e) {
-            saveFailure(document, "Gemini extraction failed: " + e.getMessage());
-        } catch (Exception e) {
-            saveFailure(document, "Could not parse Gemini's response as valid contract JSON: " + e.getMessage());
-        } catch (Throwable t) {
-            log.error("Unexpected failure during contract field extraction for document id={}",
-                document.getId(), t);
-            saveFailure(document, "Unexpected extraction failure: " + t.getClass().getSimpleName());
-        }
+        String prompt = ExtractContractPrompt.PROMPT_TEXT + "\n\nDocument text:\n" + document.getExtractedText();
+        extractFields(document, prompt, ExtractContractPrompt.JSON_SCHEMA, ContractExtractionDto.class);
     }
 
     public void extractResumeFields(Document document) {
-        String extractedText = document.getExtractedText();
-        if (extractedText == null || extractedText.isBlank()) {
-            saveFailure(document, "No extracted text available to run field extraction on.");
-            return;
-        }
+        String prompt = ExtractResumePrompt.PROMPT_TEXT + "\n\nDocument text:\n" + document.getExtractedText();
+        extractFields(document, prompt, ExtractResumePrompt.JSON_SCHEMA, ResumeExtractionDto.class);
+    }
 
-        try {
-            String prompt = ExtractResumePrompt.PROMPT_TEXT + "\n\nDocument text:\n" + extractedText;
-            String rawJson = geminiClient.generateStructuredJson(prompt, ExtractResumePrompt.JSON_SCHEMA);
-
-            ResumeExtractionDto dto = objectMapper.readValue(rawJson, ResumeExtractionDto.class);
-
-            Set<ConstraintViolation<ResumeExtractionDto>> violations = validator.validate(dto);
-            if (!violations.isEmpty()) {
-                String reasons = violations.stream()
-                    .map(v -> v.getPropertyPath() + ": " + v.getMessage())
-                    .reduce((a, b) -> a + "; " + b)
-                    .orElse("validation failed");
-                saveFailure(document, "Gemini response failed validation: " + reasons);
-                return;
-            }
-
-            String sanitizedJson = stripNulBytes(rawJson);
-            Extraction extraction = extractionRepository.findByDocumentId(document.getId())
-                .orElse(new Extraction(document, sanitizedJson));
-            extraction.setFieldsJson(sanitizedJson);
-            extraction.setFailedReason(null);
-            extractionRepository.save(extraction);
-        } catch (GeminiClient.GeminiException e) {
-            saveFailure(document, "Gemini extraction failed: " + e.getMessage());
-        } catch (Exception e) {
-            saveFailure(document, "Could not parse Gemini's response as valid resume JSON: " + e.getMessage());
-        } catch (Throwable t) {
-            log.error("Unexpected failure during resume field extraction for document id={}",
-                document.getId(), t);
-            saveFailure(document, "Unexpected extraction failure: " + t.getClass().getSimpleName());
+    /**
+     * Dispatches structured field extraction based on document type.
+     */
+    public void extractDocumentFields(Document document) {
+        switch (document.getType()) {
+            case INVOICE  -> extractInvoiceFields(document);
+            case CONTRACT -> extractContractFields(document);
+            case RESUME   -> extractResumeFields(document);
+            default       -> log.warn("No extractor defined for document type={}", document.getType());
         }
     }
 
@@ -177,25 +122,11 @@ public class ExtractionService {
         try {
             Extraction extraction = extractionRepository.findByDocumentId(document.getId())
                 .orElse(new Extraction(document, "{}"));
-            extraction.setFailedReason(stripNulBytes(reason));
+            extraction.setFailedReason(SanitizationUtils.stripNulBytes(reason));
             extractionRepository.save(extraction);
         } catch (Throwable t) {
-            // Last line of defense - if we can't even persist the failure reason (DB blip,
-            // constraint issue), at least log it loudly instead of losing it silently.
             log.error("Could not persist extraction failure for document id={} (reason was: {})",
                 document.getId(), reason, t);
         }
-    }
-
-    /**
-     * PostgreSQL's text/UTF8 columns reject NUL (0x00) bytes outright. See the identical
-     * helper in DocumentProcessingService for the full explanation - this is the same fix
-     * applied to the extraction side of the pipeline.
-     */
-    private String stripNulBytes(String text) {
-        if (text == null) {
-            return null;
-        }
-        return text.indexOf('\u0000') == -1 ? text : text.replace("\u0000", "");
     }
 }

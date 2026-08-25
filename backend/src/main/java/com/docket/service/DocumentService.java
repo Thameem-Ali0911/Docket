@@ -5,6 +5,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import org.springframework.core.io.Resource;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -25,6 +29,10 @@ import com.docket.repository.ExtractionRepository;
 import com.docket.repository.SummaryRepository;
 import com.docket.repository.UserRepository;
 
+/**
+ * Service managing document lifecycles, workspace isolation checks, enrichment,
+ * secure file retrieval, reprocessing, and export generation.
+ */
 @Service
 public class DocumentService {
 
@@ -108,8 +116,40 @@ public class DocumentService {
     }
 
     /**
+     * Retrieves a page of documents for the workspace enriched with anomaly counts.
+     */
+    public Page<DocumentListItemDto> getEnrichedDocumentsForWorkspace(Integer userId, Pageable pageable) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "USER_NOT_FOUND", "User not found"));
+
+        Page<Document> docPage = documentRepository.findByWorkspaceId(user.getWorkspace().getId(), pageable);
+        if (docPage.isEmpty()) {
+            return Page.empty(pageable);
+        }
+
+        List<Integer> docIds = docPage.getContent().stream().map(Document::getId).collect(Collectors.toList());
+        List<AnomalyFlag> allFlags = anomalyFlagRepository.findByDocumentIdIn(docIds);
+        Map<Integer, Long> flagCounts = allFlags.stream()
+                .collect(Collectors.groupingBy(f -> f.getDocument().getId(), Collectors.counting()));
+
+        List<DocumentListItemDto> dtos = docPage.getContent().stream()
+                .map(d -> new DocumentListItemDto(
+                        d.getId(),
+                        d.getType(),
+                        d.getFileUrl(),
+                        d.getStatus(),
+                        d.getUploadedAt(),
+                        d.getFailedReason(),
+                        flagCounts.getOrDefault(d.getId(), 0L)
+                ))
+                .collect(Collectors.toList());
+
+        return new PageImpl<>(dtos, pageable, docPage.getTotalElements());
+    }
+
+    /**
      * Fetches a single document, scoped to the requesting user's workspace so users
-     * can't read documents belonging to another workspace by guessing IDs.
+     * cannot read documents belonging to another workspace by guessing IDs.
      */
     public Document getDocumentForWorkspace(Integer userId, Integer documentId) {
         User user = userRepository.findById(userId)
@@ -122,6 +162,60 @@ public class DocumentService {
             throw new ApiException(HttpStatus.NOT_FOUND, "DOCUMENT_NOT_FOUND", "Document not found");
         }
         return doc;
+    }
+
+    /**
+     * Fetches a single document enriched DTO, scoped to workspace.
+     */
+    public DocumentListItemDto getDocumentDtoForWorkspace(Integer userId, Integer documentId) {
+        Document doc = getDocumentForWorkspace(userId, documentId);
+        long anomalyCount = anomalyFlagRepository.findByDocumentId(documentId).size();
+
+        return new DocumentListItemDto(
+                doc.getId(),
+                doc.getType(),
+                doc.getFileUrl(),
+                doc.getStatus(),
+                doc.getUploadedAt(),
+                doc.getFailedReason(),
+                anomalyCount
+        );
+    }
+
+    /**
+     * Resolves the secure Spring Resource for a document after confirming workspace ownership.
+     */
+    public Resource getDocumentFileForWorkspace(Integer userId, Integer documentId) {
+        Document doc = getDocumentForWorkspace(userId, documentId);
+        return storageService.getResource(doc.getFileUrl());
+    }
+
+    /**
+     * Manually triggers reprocessing for a failed or stuck document.
+     */
+    public Document reprocessDocument(Integer userId, Integer documentId) {
+        Document doc = getDocumentForWorkspace(userId, documentId);
+        doc.setStatus(DocumentStatus.PENDING);
+        doc.setFailedReason(null);
+        doc = documentRepository.save(doc);
+
+        documentProcessingService.processDocumentAsync(doc);
+        return doc;
+    }
+
+    public Extraction getExtractionForWorkspace(Integer userId, Integer documentId) {
+        getDocumentForWorkspace(userId, documentId);
+        return extractionRepository.findByDocumentId(documentId).orElse(null);
+    }
+
+    public Summary getSummaryForWorkspace(Integer userId, Integer documentId) {
+        getDocumentForWorkspace(userId, documentId);
+        return summaryRepository.findByDocumentId(documentId).orElse(null);
+    }
+
+    public List<AnomalyFlag> getAnomaliesForWorkspace(Integer userId, Integer documentId) {
+        getDocumentForWorkspace(userId, documentId);
+        return anomalyFlagRepository.findByDocumentId(documentId);
     }
 
     /**
@@ -166,5 +260,3 @@ public class DocumentService {
                 .collect(Collectors.toList());
     }
 }
-
-

@@ -16,6 +16,17 @@ import jakarta.validation.Validator;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import com.docket.dto.document.SummaryResponseDto;
+import com.docket.entity.Document;
+import com.docket.entity.Summary;
+import com.docket.prompt.SummarizePrompt;
+import com.docket.repository.SummaryRepository;
+import com.docket.util.SanitizationUtils;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+import jakarta.validation.ConstraintViolation;
+import jakarta.validation.Validator;
+
 @Service
 public class SummarizeService {
 
@@ -58,7 +69,7 @@ public class SummarizeService {
             Summary summary = summaryRepository.findByDocumentId(document.getId())
                     .orElseGet(() -> new Summary(document, null));
 
-            summary.setSummaryText(stripNulBytes(dto.summary()));
+            summary.setSummaryText(SanitizationUtils.stripNulBytes(dto.summary()));
             summary.setFailedReason(null);
             summaryRepository.save(summary);
 
@@ -77,15 +88,10 @@ public class SummarizeService {
         try {
             Summary summary = summaryRepository.findByDocumentId(document.getId())
                     .orElseGet(() -> new Summary(document, null));
-            summary.setFailedReason(stripNulBytes(reason));
+            summary.setFailedReason(SanitizationUtils.stripNulBytes(reason));
             summaryRepository.save(summary);
         } catch (Throwable t) {
             log.error("Failed to persist summary failure reason for document id={}", document.getId(), t);
         }
-    }
-
-    private String stripNulBytes(String text) {
-        if (text == null) return null;
-        return text.indexOf('\u0000') == -1 ? text : text.replace("\u0000", "");
     }
 }

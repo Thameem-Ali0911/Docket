@@ -2,8 +2,12 @@ package com.docket.controller;
 
 import java.nio.charset.StandardCharsets;
 import java.util.List;
-import java.util.Optional;
 
+import org.springframework.core.io.Resource;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -23,36 +27,28 @@ import com.docket.entity.Document;
 import com.docket.entity.DocumentType;
 import com.docket.entity.Extraction;
 import com.docket.entity.Summary;
-import com.docket.repository.AnomalyFlagRepository;
-import com.docket.repository.ExtractionRepository;
-import com.docket.repository.SummaryRepository;
 import com.docket.service.DocumentService;
 import com.docket.service.ExportService;
 
+/**
+ * REST controller for document ingestion, inspection, secure file streaming,
+ * reprocessing, and export generation.
+ */
 @RestController
 @RequestMapping("/api/documents")
 public class DocumentController {
 
     private final DocumentService documentService;
-    private final ExtractionRepository extractionRepository;
-    private final SummaryRepository summaryRepository;
-    private final AnomalyFlagRepository anomalyFlagRepository;
     private final ExportService exportService;
 
-    public DocumentController(DocumentService documentService,
-                              ExtractionRepository extractionRepository, 
-                              SummaryRepository summaryRepository,
-                              AnomalyFlagRepository anomalyFlagRepository,
-                              ExportService exportService) {
+    public DocumentController(DocumentService documentService, ExportService exportService) {
         this.documentService = documentService;
-        this.extractionRepository = extractionRepository;
-        this.summaryRepository = summaryRepository;
-        this.anomalyFlagRepository = anomalyFlagRepository;
         this.exportService = exportService;
     }
 
     /**
      * Retrieves all documents for the authenticated user's workspace, enriched with anomaly counts.
+     * Supports optional pagination (?page=0&size=20) or returns all items by default.
      *
      * @param authentication the authenticated user's details
      * @return List of DocumentListItemDto
@@ -65,10 +61,92 @@ public class DocumentController {
     }
 
     /**
+     * Retrieves a paginated list of documents for the workspace.
+     *
+     * @param pageable       pagination and sorting parameters
+     * @param authentication the authenticated user's details
+     * @return Page of DocumentListItemDto
+     */
+    @GetMapping("/page")
+    public ResponseEntity<Page<DocumentListItemDto>> getDocumentsPaged(
+            @PageableDefault(size = 20, sort = "uploadedAt", direction = Sort.Direction.DESC) Pageable pageable,
+            Authentication authentication) {
+        Integer userId = (Integer) authentication.getPrincipal();
+        Page<DocumentListItemDto> page = documentService.getEnrichedDocumentsForWorkspace(userId, pageable);
+        return ResponseEntity.ok(page);
+    }
+
+    /**
+     * Retrieves metadata and anomaly summary for a single document by ID.
+     *
+     * @param id             the document ID
+     * @param authentication the authenticated user's details
+     * @return DocumentListItemDto
+     */
+    @GetMapping("/{id}")
+    public ResponseEntity<DocumentListItemDto> getDocumentById(
+            @PathVariable("id") Integer id,
+            Authentication authentication) {
+        Integer userId = (Integer) authentication.getPrincipal();
+        DocumentListItemDto dto = documentService.getDocumentDtoForWorkspace(userId, id);
+        return ResponseEntity.ok(dto);
+    }
+
+    /**
+     * Securely streams the stored file content for viewing/previewing.
+     * Access is strictly guarded by workspace ownership verification.
+     *
+     * @param id             the document ID
+     * @param authentication the authenticated user's details
+     * @return ResponseEntity streaming the file Resource
+     */
+    @GetMapping("/{id}/file")
+    public ResponseEntity<Resource> getDocumentFile(
+            @PathVariable("id") Integer id,
+            Authentication authentication) {
+        Integer userId = (Integer) authentication.getPrincipal();
+        Document doc = documentService.getDocumentForWorkspace(userId, id);
+        Resource resource = documentService.getDocumentFileForWorkspace(userId, id);
+
+        String contentType = "application/octet-stream";
+        String fileUrlLower = doc.getFileUrl().toLowerCase();
+        if (fileUrlLower.endsWith(".pdf")) {
+            contentType = "application/pdf";
+        } else if (fileUrlLower.endsWith(".jpg") || fileUrlLower.endsWith(".jpeg")) {
+            contentType = "image/jpeg";
+        } else if (fileUrlLower.endsWith(".png")) {
+            contentType = "image/png";
+        }
+
+        String filename = doc.getFileUrl().substring(doc.getFileUrl().lastIndexOf('/') + 1);
+
+        return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType(contentType))
+                .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + filename + "\"")
+                .body(resource);
+    }
+
+    /**
+     * Manually triggers reprocessing of a failed or stuck document.
+     *
+     * @param id             the document ID
+     * @param authentication the authenticated user's details
+     * @return the updated Document entity
+     */
+    @PostMapping("/{id}/reprocess")
+    public ResponseEntity<Document> reprocessDocument(
+            @PathVariable("id") Integer id,
+            Authentication authentication) {
+        Integer userId = (Integer) authentication.getPrincipal();
+        Document doc = documentService.reprocessDocument(userId, id);
+        return ResponseEntity.ok(doc);
+    }
+
+    /**
      * Uploads a document to the current user's workspace.
      *
-     * @param type the DocumentType enum (e.g. INVOICE)
-     * @param file the MultipartFile to upload
+     * @param type           the DocumentType enum (e.g. INVOICE)
+     * @param file           the MultipartFile to upload
      * @param authentication the authenticated user's details
      * @return the saved Document entity
      */
@@ -77,7 +155,6 @@ public class DocumentController {
             @RequestParam("type") DocumentType type,
             @RequestParam("file") MultipartFile file,
             Authentication authentication) {
-        
         Integer userId = (Integer) authentication.getPrincipal();
         Document document = documentService.uploadDocument(userId, type, file);
         return ResponseEntity.ok(document);
@@ -91,10 +168,8 @@ public class DocumentController {
             @PathVariable("id") Integer id,
             Authentication authentication) {
         Integer userId = (Integer) authentication.getPrincipal();
-        documentService.getDocumentForWorkspace(userId, id);
-
-        Optional<Extraction> extraction = extractionRepository.findByDocumentId(id);
-        return ResponseEntity.ok(extraction.orElse(null));
+        Extraction extraction = documentService.getExtractionForWorkspace(userId, id);
+        return ResponseEntity.ok(extraction);
     }
 
     /**
@@ -105,10 +180,8 @@ public class DocumentController {
             @PathVariable("id") Integer id,
             Authentication authentication) {
         Integer userId = (Integer) authentication.getPrincipal();
-        documentService.getDocumentForWorkspace(userId, id);
-
-        Optional<Summary> summary = summaryRepository.findByDocumentId(id);
-        return ResponseEntity.ok(summary.orElse(null));
+        Summary summary = documentService.getSummaryForWorkspace(userId, id);
+        return ResponseEntity.ok(summary);
     }
 
     /**
@@ -119,9 +192,7 @@ public class DocumentController {
             @PathVariable("id") Integer id,
             Authentication authentication) {
         Integer userId = (Integer) authentication.getPrincipal();
-        documentService.getDocumentForWorkspace(userId, id);
-
-        List<AnomalyFlag> anomalies = anomalyFlagRepository.findByDocumentId(id);
+        List<AnomalyFlag> anomalies = documentService.getAnomaliesForWorkspace(userId, id);
         return ResponseEntity.ok(anomalies);
     }
 
@@ -177,4 +248,3 @@ public class DocumentController {
                 .body(content.getBytes(StandardCharsets.UTF_8));
     }
 }
-

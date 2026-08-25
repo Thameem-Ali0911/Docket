@@ -28,15 +28,18 @@ public class AuthService {
     private final WorkspaceRepository workspaceRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
+    private final com.docket.security.LoginRateLimiter loginRateLimiter;
 
     public AuthService(UserRepository userRepository,
                        WorkspaceRepository workspaceRepository,
                        PasswordEncoder passwordEncoder,
-                       JwtService jwtService) {
+                       JwtService jwtService,
+                       com.docket.security.LoginRateLimiter loginRateLimiter) {
         this.userRepository = userRepository;
         this.workspaceRepository = workspaceRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
+        this.loginRateLimiter = loginRateLimiter;
     }
 
     /**
@@ -66,21 +69,27 @@ public class AuthService {
 
     /**
      * Authenticates a user by email + password and returns a JWT.
+     * Enforces rate limiting against brute-force attacks.
      *
      * @param request login credentials
      * @return auth response with token and user/workspace info
-     * @throws ApiException 401 if email not found or password doesn't match
+     * @throws ApiException 429 if account is locked out, 401 if credentials are invalid
      */
     public AuthResponse login(LoginRequest request) {
-        User user = userRepository.findByEmail(request.email())
-                .orElseThrow(() -> new ApiException(HttpStatus.UNAUTHORIZED, "INVALID_CREDENTIALS",
-                        "Invalid email or password"));
+        String email = request.email();
+        if (loginRateLimiter.isBlocked(email)) {
+            throw new ApiException(HttpStatus.TOO_MANY_REQUESTS, "ACCOUNT_LOCKED",
+                    "Too many failed login attempts. Account is temporarily locked. Please try again later.");
+        }
 
-        if (!passwordEncoder.matches(request.password(), user.getPasswordHash())) {
+        User user = userRepository.findByEmail(email).orElse(null);
+        if (user == null || !passwordEncoder.matches(request.password(), user.getPasswordHash())) {
+            loginRateLimiter.recordFailure(email);
             throw new ApiException(HttpStatus.UNAUTHORIZED, "INVALID_CREDENTIALS",
                     "Invalid email or password");
         }
 
+        loginRateLimiter.recordSuccess(email);
         String token = jwtService.generateToken(user);
         Workspace workspace = user.getWorkspace();
 
