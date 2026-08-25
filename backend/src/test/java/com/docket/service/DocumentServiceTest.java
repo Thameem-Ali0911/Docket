@@ -48,6 +48,8 @@ class DocumentServiceTest {
     private SummaryRepository summaryRepository;
     @Mock
     private ExportService exportService;
+    @Mock
+    private LlmBudgetService llmBudgetService;
 
     private DocumentService documentService;
 
@@ -64,7 +66,8 @@ class DocumentServiceTest {
                 anomalyFlagRepository,
                 extractionRepository,
                 summaryRepository,
-                exportService
+                exportService,
+                llmBudgetService
         );
 
         workspace = new Workspace("Acme Workspace");

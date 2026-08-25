@@ -27,6 +27,10 @@ public class Workspace {
     @Column(name = "created_at", insertable = false, updatable = false)
     private OffsetDateTime createdAt;
 
+    /** Daily LLM invocation budget per workspace. Defaults to 100 calls/day. */
+    @Column(name = "daily_llm_budget", nullable = false)
+    private int dailyLlmBudget = 100;
+
     protected Workspace() {
         // JPA requires a no-arg constructor
     }
@@ -49,5 +53,13 @@ public class Workspace {
 
     public OffsetDateTime getCreatedAt() {
         return createdAt;
+    }
+
+    public int getDailyLlmBudget() {
+        return dailyLlmBudget;
+    }
+
+    public void setDailyLlmBudget(int dailyLlmBudget) {
+        this.dailyLlmBudget = dailyLlmBudget;
     }
 }

@@ -1,5 +1,6 @@
 package com.docket.service;
 
+import java.time.OffsetDateTime;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -11,10 +12,12 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.docket.dto.document.DocumentExportDto;
 import com.docket.dto.document.DocumentListItemDto;
+import com.docket.dto.extraction.ExtractionCorrectionRequest;
 import com.docket.entity.AnomalyFlag;
 import com.docket.entity.Document;
 import com.docket.entity.DocumentStatus;
@@ -44,6 +47,7 @@ public class DocumentService {
     private final ExtractionRepository extractionRepository;
     private final SummaryRepository summaryRepository;
     private final ExportService exportService;
+    private final LlmBudgetService llmBudgetService;
 
     public DocumentService(DocumentRepository documentRepository,
                            UserRepository userRepository,
@@ -52,7 +56,8 @@ public class DocumentService {
                            AnomalyFlagRepository anomalyFlagRepository,
                            ExtractionRepository extractionRepository,
                            SummaryRepository summaryRepository,
-                           ExportService exportService) {
+                           ExportService exportService,
+                           LlmBudgetService llmBudgetService) {
         this.documentRepository = documentRepository;
         this.userRepository = userRepository;
         this.storageService = storageService;
@@ -61,6 +66,7 @@ public class DocumentService {
         this.extractionRepository = extractionRepository;
         this.summaryRepository = summaryRepository;
         this.exportService = exportService;
+        this.llmBudgetService = llmBudgetService;
     }
 
     public Document uploadDocument(Integer userId, DocumentType type, MultipartFile file) {
@@ -258,5 +264,42 @@ public class DocumentService {
                         anomalyMap.getOrDefault(doc.getId(), Collections.emptyList())
                 ))
                 .collect(Collectors.toList());
+    }
+
+    /**
+     * Saves a human correction to an extraction, preserving the original AI output in fieldsJson.
+     * The correctedJson is stored in humanCorrectedJson and becomes the authoritative value
+     * returned by getEffectiveFieldsJson(). Downstream anomaly comparisons will use this corrected
+     * version going forward.
+     *
+     * @param userId     the authenticated user
+     * @param documentId the document whose extraction is being corrected
+     * @param request    the correction payload
+     * @return the updated Extraction entity
+     */
+    @Transactional
+    public Extraction correctExtraction(Integer userId, Integer documentId,
+                                         ExtractionCorrectionRequest request) {
+        getDocumentForWorkspace(userId, documentId); // workspace isolation check
+
+        Extraction extraction = extractionRepository.findByDocumentId(documentId)
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "EXTRACTION_NOT_FOUND",
+                        "No extraction found for document " + documentId));
+
+        String sanitized = com.docket.util.SanitizationUtils.stripNulBytes(request.correctedFieldsJson());
+        extraction.setHumanCorrectedJson(sanitized);
+        extraction.setCorrectionNote(request.correctionNote());
+        extraction.setCorrectedAt(OffsetDateTime.now());
+
+        return extractionRepository.save(extraction);
+    }
+
+    /**
+     * Returns today's LLM call count for the workspace associated with the given user.
+     */
+    public int getTodayLlmUsage(Integer userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "USER_NOT_FOUND", "User not found"));
+        return llmBudgetService.getTodayUsage(user.getWorkspace().getId());
     }
 }

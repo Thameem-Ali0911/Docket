@@ -165,3 +165,16 @@ export async function fetchBlobUrl(path) {
     return window.URL.createObjectURL(blob);
 }
 
+/**
+ * Convenience wrapper for PATCH requests with a JSON body.
+ *
+ * @param {string} path  — API path (e.g., "/api/documents/1/extraction")
+ * @param {object} body  — JSON-serializable body
+ * @returns {Promise<any>} parsed JSON response
+ */
+export async function apiPatch(path, body) {
+    return apiFetch(path, {
+        method: 'PATCH',
+        body: JSON.stringify(body),
+    });
+}

@@ -13,8 +13,10 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -22,6 +24,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import com.docket.dto.document.DocumentExportDto;
 import com.docket.dto.document.DocumentListItemDto;
+import com.docket.dto.extraction.ExtractionCorrectionRequest;
 import com.docket.entity.AnomalyFlag;
 import com.docket.entity.Document;
 import com.docket.entity.DocumentType;
@@ -29,6 +32,8 @@ import com.docket.entity.Extraction;
 import com.docket.entity.Summary;
 import com.docket.service.DocumentService;
 import com.docket.service.ExportService;
+
+import jakarta.validation.Valid;
 
 /**
  * REST controller for document ingestion, inspection, secure file streaming,
@@ -170,6 +175,39 @@ public class DocumentController {
         Integer userId = (Integer) authentication.getPrincipal();
         Extraction extraction = documentService.getExtractionForWorkspace(userId, id);
         return ResponseEntity.ok(extraction);
+    }
+
+    /**
+     * Saves human-in-the-loop corrections to extracted fields.
+     * The original AI extraction is preserved; the correction is stored separately.
+     *
+     * @param id             the document ID
+     * @param request        correction payload containing correctedFieldsJson and optional note
+     * @param authentication the authenticated user's details
+     * @return the updated Extraction entity
+     */
+    @PatchMapping("/{id}/extraction")
+    public ResponseEntity<Extraction> correctExtraction(
+            @PathVariable("id") Integer id,
+            @Valid @RequestBody ExtractionCorrectionRequest request,
+            Authentication authentication) {
+        Integer userId = (Integer) authentication.getPrincipal();
+        Extraction updated = documentService.correctExtraction(userId, id, request);
+        return ResponseEntity.ok(updated);
+    }
+
+    /**
+     * Returns today's LLM call count for the authenticated user's workspace.
+     * Useful for the frontend to display budget status.
+     *
+     * @param authentication the authenticated user's details
+     * @return map containing todayUsage count
+     */
+    @GetMapping("/usage")
+    public ResponseEntity<java.util.Map<String, Integer>> getLlmUsage(Authentication authentication) {
+        Integer userId = (Integer) authentication.getPrincipal();
+        int usage = documentService.getTodayLlmUsage(userId);
+        return ResponseEntity.ok(java.util.Map.of("todayLlmUsage", usage));
     }
 
     /**

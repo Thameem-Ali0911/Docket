@@ -36,3 +36,15 @@ management:
       show-details: always
 
 storage.upload-dir: ${STORAGE_UPLOAD_DIR:/app/uploads}
+
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    operationsSorter: method
+    tagsSorter: alpha
+  info:
+    title: Docket API
+    description: Document intelligence platform — structured field extraction, summarization, anomaly detection
+    version: 1.0.0

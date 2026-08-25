@@ -25,6 +25,7 @@ import com.docket.repository.UserRepository;
 import com.docket.service.DocumentProcessingService;
 import com.docket.service.DocumentService;
 import com.docket.service.ExportService;
+import com.docket.service.LlmBudgetService;
 import com.docket.service.StorageService;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -49,6 +50,8 @@ class WorkspaceIsolationTest {
     private SummaryRepository summaryRepository;
     @Mock
     private ExportService exportService;
+    @Mock
+    private LlmBudgetService llmBudgetService;
 
     private DocumentService documentService;
 
@@ -67,7 +70,8 @@ class WorkspaceIsolationTest {
                 anomalyFlagRepository,
                 extractionRepository,
                 summaryRepository,
-                exportService
+                exportService,
+                llmBudgetService
         );
 
         workspaceA = new Workspace("Workspace Alpha");

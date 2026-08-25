@@ -45,7 +45,12 @@ public class SecurityConfig {
                                          "/actuator/health",
                                          "/actuator/info",
                                          "/api/auth/signup",
-                                         "/api/auth/login").permitAll()
+                                         "/api/auth/login",
+                                         // Swagger UI — docs are public so team/evaluators can inspect the API
+                                         "/swagger-ui.html",
+                                         "/swagger-ui/**",
+                                         "/v3/api-docs",
+                                         "/v3/api-docs/**").permitAll()
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);

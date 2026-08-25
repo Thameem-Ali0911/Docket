@@ -36,6 +36,19 @@ public class Extraction {
     @Column(name = "created_at", insertable = false, updatable = false)
     private OffsetDateTime createdAt;
 
+    /** Human-corrected JSON override — present when a user has edited AI-extracted fields.
+     *  The original {@code fieldsJson} is preserved for audit purposes. */
+    @Column(name = "human_corrected_json", columnDefinition = "TEXT")
+    private String humanCorrectedJson;
+
+    /** Optional free-text note explaining the correction reason. */
+    @Column(name = "correction_note", length = 1000)
+    private String correctionNote;
+
+    /** Timestamp of the last human correction. */
+    @Column(name = "corrected_at")
+    private OffsetDateTime correctedAt;
+
     protected Extraction() {
     }
 
@@ -51,4 +64,17 @@ public class Extraction {
     public String getFailedReason() { return failedReason; }
     public void setFailedReason(String failedReason) { this.failedReason = failedReason; }
     public OffsetDateTime getCreatedAt() { return createdAt; }
+
+    public String getHumanCorrectedJson() { return humanCorrectedJson; }
+    public void setHumanCorrectedJson(String humanCorrectedJson) { this.humanCorrectedJson = humanCorrectedJson; }
+    public String getCorrectionNote() { return correctionNote; }
+    public void setCorrectionNote(String correctionNote) { this.correctionNote = correctionNote; }
+    public OffsetDateTime getCorrectedAt() { return correctedAt; }
+    public void setCorrectedAt(OffsetDateTime correctedAt) { this.correctedAt = correctedAt; }
+
+    /** Returns the effective fields to display — human-corrected JSON if present, else AI-extracted JSON. */
+    @com.fasterxml.jackson.annotation.JsonIgnore
+    public String getEffectiveFieldsJson() {
+        return humanCorrectedJson != null ? humanCorrectedJson : fieldsJson;
+    }
 }

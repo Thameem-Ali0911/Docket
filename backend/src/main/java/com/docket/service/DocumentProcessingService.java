@@ -26,16 +26,19 @@ public class DocumentProcessingService {
     private final ExtractionService extractionService;
     private final SummarizeService summarizeService;
     private final AnomalyService anomalyService;
+    private final LlmBudgetService llmBudgetService;
 
     public DocumentProcessingService(OcrService ocrService, StorageService storageService,
                                       DocumentRepository documentRepository, ExtractionService extractionService,
-                                      SummarizeService summarizeService, AnomalyService anomalyService) {
+                                      SummarizeService summarizeService, AnomalyService anomalyService,
+                                      LlmBudgetService llmBudgetService) {
         this.ocrService = ocrService;
         this.storageService = storageService;
         this.documentRepository = documentRepository;
         this.extractionService = extractionService;
         this.summarizeService = summarizeService;
         this.anomalyService = anomalyService;
+        this.llmBudgetService = llmBudgetService;
     }
 
     @Async
@@ -93,7 +96,11 @@ public class DocumentProcessingService {
         // Run structured field extraction for successfully-OCR'd documents.
         if (doc.getStatus() == DocumentStatus.PROCESSED) {
             try {
+                llmBudgetService.checkAndIncrementBudget(doc.getWorkspace().getId());
                 extractionService.extractDocumentFields(doc);
+            } catch (com.docket.exception.ApiException budgetEx) {
+                log.warn("LLM budget exhausted for workspace {} — skipping extraction for doc {}",
+                    doc.getWorkspace().getId(), doc.getId());
             } catch (Throwable t) {
                 log.error("Field extraction failed for document id={}", doc.getId(), t);
             }
@@ -102,14 +109,22 @@ public class DocumentProcessingService {
         // Run summarization for all successfully-OCR'd documents.
         if (doc.getStatus() == DocumentStatus.PROCESSED) {
             try {
+                llmBudgetService.checkAndIncrementBudget(doc.getWorkspace().getId());
                 summarizeService.summarizeDocument(doc);
+            } catch (com.docket.exception.ApiException budgetEx) {
+                log.warn("LLM budget exhausted for workspace {} — skipping summarization for doc {}",
+                    doc.getWorkspace().getId(), doc.getId());
             } catch (Throwable t) {
                 log.error("Summarization failed for document id={}", doc.getId(), t);
             }
             
             // Run anomaly checks against the workspace template
             try {
+                llmBudgetService.checkAndIncrementBudget(doc.getWorkspace().getId());
                 anomalyService.checkAnomalies(doc);
+            } catch (com.docket.exception.ApiException budgetEx) {
+                log.warn("LLM budget exhausted for workspace {} — skipping anomaly check for doc {}",
+                    doc.getWorkspace().getId(), doc.getId());
             } catch (Throwable t) {
                 log.error("Anomaly checking failed for document id={}", doc.getId(), t);
             }

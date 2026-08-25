@@ -23,14 +23,23 @@ export default function Dashboard() {
     const [typeFilter, setTypeFilter] = useState('ALL');
     const [statusFilter, setStatusFilter] = useState('ALL');
     const [dateFilter, setDateFilter] = useState('ALL');
+    const [llmUsage, setLlmUsage] = useState(null); // today's LLM call count
 
     useEffect(() => { loadDashboard(); }, [navigate]);
 
     function loadDashboard() {
         setLoading(true);
         setLoadError(null);
-        Promise.all([apiFetch('/api/auth/me'), apiFetch('/api/documents')])
-            .then(([userData, docsData]) => { setUser(userData); setDocuments(docsData); })
+        Promise.all([
+            apiFetch('/api/auth/me'),
+            apiFetch('/api/documents'),
+            apiFetch('/api/documents/usage').catch(() => ({ todayLlmUsage: null })),
+        ])
+            .then(([userData, docsData, usageData]) => {
+                setUser(userData);
+                setDocuments(docsData);
+                if (usageData?.todayLlmUsage !== undefined) setLlmUsage(usageData.todayLlmUsage);
+            })
             .catch((err) => {
                 if (err.status === 401) { clearToken(); navigate('/login', { replace: true }); return; }
                 setLoadError(err.message || 'Failed to load dashboard.');
@@ -219,7 +228,7 @@ export default function Dashboard() {
                 </motion.div>
 
                 {/* ── Metric cards ── */}
-                <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-5">
+                <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-3">
                     {metricCards.map(({ label, value, color, bg, icon: Icon }, i) => (
                         <motion.div
                             key={label}
@@ -246,6 +255,38 @@ export default function Dashboard() {
                         </motion.div>
                     ))}
                 </div>
+
+                {/* ── LLM Usage Bar ── */}
+                {llmUsage !== null && (
+                    <motion.div
+                        initial={{ opacity: 0, y: 6 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.3, duration: 0.25 }}
+                        className="card-neo-sm px-4 py-2.5 mb-4 flex items-center gap-4"
+                        style={{ background: 'var(--color-surface)' }}
+                        title={`${llmUsage} AI operations used today out of 100 daily budget`}
+                    >
+                        <span style={{ fontSize: 10.5, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#7C5CFC', whiteSpace: 'nowrap' }}>
+                            AI Budget
+                        </span>
+                        <div style={{ flex: 1, height: 5, background: 'rgba(255,255,255,0.06)', borderRadius: 999, overflow: 'hidden' }}>
+                            <div style={{
+                                height: '100%',
+                                width: `${Math.min((llmUsage / 100) * 100, 100)}%`,
+                                borderRadius: 999,
+                                background: llmUsage >= 90
+                                    ? 'linear-gradient(90deg, #F65A5A, #F5A524)'
+                                    : llmUsage >= 70
+                                    ? 'linear-gradient(90deg, #F5A524, #22D3EE)'
+                                    : 'linear-gradient(90deg, #7C5CFC, #22D3EE)',
+                                transition: 'width 0.5s ease',
+                            }} />
+                        </div>
+                        <span style={{ fontSize: 11, color: 'var(--color-text-secondary)', whiteSpace: 'nowrap' }}>
+                            {llmUsage} / 100 today
+                        </span>
+                    </motion.div>
+                )}
 
                 {/* ── Filter + Export bar ── */}
                 <motion.div
