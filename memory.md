@@ -17,8 +17,8 @@
 ## Current Status
 
 - **Active Phase:** Phase 12 — Stretch Goals & Enterprise Enhancements
-- **Last Updated:** 2026-08-25
-- **Overall Progress:** ~95% — Phases 0–11 complete. Phase 11 (Deployment & Demo Readiness) fully implemented with Flyway V9 demo seed data, DEMO_SCRIPT.md walkthrough, updated deployment templates, and 26 passing automated tests.
+- **Last Updated:** 2026-09-11
+- **Overall Progress:** ~97% — Phases 0–11 complete, Phase 12.1 (Batch Upload) complete. 27 passing automated tests, frontend builds cleanly.
 
 ## Completed
 
@@ -91,17 +91,22 @@
   - **11.1 Demo Data Seeder (Flyway V9):** Created `V9__seed_demo_data.sql` inserting a pre-seeded demo workspace (`Acme Global Demo`), user (`demo@docket.ai` / `Demo1234!`), 3 rich sample documents (Invoice with Net-15 anomaly, Contract with 14-day termination notice anomaly, clean Senior Resume), and active templates.
   - **11.2 5-Minute Evaluation Walkthrough (`DEMO_SCRIPT.md`):** Complete click-path documentation for evaluators/judges covering login, metrics, field extraction, anomaly deviations, human-in-the-loop editing, export, and OpenAPI testing.
   - **11.3 Environment & Production Documentation:** Overhauled `.env.example`, `README.md`, and `architecture.md` with complete environment templates, endpoint catalog, Swagger access links, and Actuator health specifications.
-  - **11.4 Docker & Container Health:** Hardened `backend/Dockerfile` with `wget` and `curl` for container healthcheck execution. Verified backend (26 tests) and frontend (`npm run build`) compilation.
+  - **11.4 Docker & Container Health:** Hardened `backend/Dockerfile` with `wget` and `curl` for container healthcheck execution. Verified backend and frontend (`npm run build`) compilation.
+- [x] Phase 12.1: Multi-Document Batch Upload (Session 37):
+  - Added `POST /api/documents/batch` endpoint in `DocumentController.java` accepting multiple `files` and a single `documentType`.
+  - Implemented `uploadDocumentsBatch()` in `DocumentService.java` returning a list of saved `DocumentListItemDto` objects, each triggered for asynchronous processing.
+  - Added unit test `uploadDocumentsBatch_MultipleFiles_Success` in `DocumentServiceTest.java` (total tests increased to 27, all passing).
+  - Redesigned `UploadDocument.jsx` to support multi-file selection, drag-and-drop batch queue, per-file preview removal, batch progress bar, and comprehensive error reporting.
 
 ## In Progress
 
-- Phase 12: Stretch Goals & Enterprise Enhancements — batch upload, confidence scoring, async message queues.
+- Phase 12: Stretch Goals & Enterprise Enhancements — confidence scoring, async message queues, KYC form, billing simulation.
 
 ## Next Steps (in order)
 
-1. **Phase 12.1 (Batch Upload):** Allow selecting and uploading multiple documents simultaneously in `UploadDocument.jsx`.
-2. **Phase 12.2 (Field-Level Confidence Scoring):** Return confidence indicators per extracted field in JSON extraction payloads.
-3. **Phase 12.3 (Queue-Based Processing):** Offload OCR & LLM processing to background message queue.
+1. **Phase 12.2 (Field-Level Confidence Scoring):** Return confidence indicators per extracted field in JSON extraction payloads.
+2. **Phase 12.3 (Queue-Based Processing):** Offload OCR & LLM processing to background message queue (RabbitMQ / Kafka).
+3. **Phase 12.4 (Multi-Document Comparative Anomaly Detection):** Cross-document vendor trend anomalies.
 
 
 ## Key Decisions & Why
@@ -554,3 +559,21 @@ pm run build).
 - Files touched: `pom.xml`, `GlobalExceptionHandler.java`, `backend/Dockerfile`, `.env.example`, `README.md`, `architecture.md`, `AuthServiceTest.java`. New: `DEMO_SCRIPT.md`, `V9__seed_demo_data.sql`.
 - Tested/confirmed: Live Docker Compose run verified: `docket-backend-1` healthy, `docket-db-1` healthy, `docket-frontend-1` running. `curl /actuator/health` = UP. Live auth login & document fetch verified. `mvn test` → 26 tests, 0 failures. `npm run build` → clean.
 - Next session should: Begin Phase 12 (Stretch Goals) — Phase 12.1 batch upload capability in `UploadDocument.jsx` and backend multi-file endpoint.
+
+### Session 37 — 2026-08-25
+- Implemented Phase 12.1: Multi-Document Batch Upload.
+- Backend: Added `POST /api/documents/batch` endpoint in `DocumentController.java` receiving `List<MultipartFile> files` and `@RequestParam DocumentType documentType`.
+- Service: Implemented `uploadDocumentsBatch()` in `DocumentService.java` to iterate through uploaded files, validate extensions/MIME types, store files, persist `Document` records, and trigger async pipeline processing.
+- Frontend: Overhauled `UploadDocument.jsx` to support multi-file selection, drag-and-drop batch queue, per-file preview removal, batch progress bar, and comprehensive error reporting.
+- Tests: Added `uploadDocumentsBatch_MultipleFiles_Success` in `DocumentServiceTest.java`.
+- Files touched: `DocumentController.java`, `DocumentService.java`, `DocumentServiceTest.java`, `UploadDocument.jsx`.
+- Tested/confirmed: `mvn test` passed with 27 tests, 0 failures. Frontend built cleanly (`npm run build`).
+
+### Session 38 — 2026-09-11
+- Audited repository against `memory.md` and `Docket_Evaluation_Report.md`:
+  - Verified all 3 evaluation tiers (Tier 1: 7/10, Tier 2: 8.5/10, Tier 3: 9.5/10) were fully addressed across Phase 9, 10, and 11.
+  - Confirmed the recent Phase 12.1 batch upload implementation and reconciled `memory.md` status, completed items, test counts, and session logs.
+  - Executed automated backend test suite (`mvn test`) — **27 tests passed cleanly, 0 failures**.
+  - Executed frontend production build (`npm run build`) — **Vite built client bundle in 1.43s, 0 errors**.
+- Files touched: `memory.md`.
+- Next session should: Proceed with Phase 12.2 (Field-level confidence scoring) or continue with deployment/live evaluation testing.
