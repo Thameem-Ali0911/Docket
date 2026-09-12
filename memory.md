@@ -17,8 +17,8 @@
 ## Current Status
 
 - **Active Phase:** Phase 12 — Stretch Goals & Enterprise Enhancements
-- **Last Updated:** 2026-09-11
-- **Overall Progress:** ~97% — Phases 0–11 complete, Phase 12.1 (Batch Upload) complete. 27 passing automated tests, frontend builds cleanly.
+- **Last Updated:** 2026-09-12
+- **Overall Progress:** ~98% — Phases 0–11 complete, Phase 12.1 (Batch Upload) and Phase 12.2 (Field-Level Confidence Scoring) complete. 28 passing automated tests, frontend builds cleanly.
 
 ## Completed
 
@@ -97,16 +97,20 @@
   - Implemented `uploadDocumentsBatch()` in `DocumentService.java` returning a list of saved `DocumentListItemDto` objects, each triggered for asynchronous processing.
   - Added unit test `uploadDocumentsBatch_MultipleFiles_Success` in `DocumentServiceTest.java` (total tests increased to 27, all passing).
   - Redesigned `UploadDocument.jsx` to support multi-file selection, drag-and-drop batch queue, per-file preview removal, batch progress bar, and comprehensive error reporting.
+- [x] Phase 12.2: Field-Level Confidence Scoring (Session 39):
+  - Extended extraction prompts and JSON schemas (`ExtractInvoicePrompt`, `ExtractContractPrompt`, `ExtractResumePrompt`) to request field confidence probabilities (0.0 to 1.0) under `fieldConfidences`.
+  - Updated extraction DTOs (`InvoiceExtractionDto`, `ContractExtractionDto`, `ResumeExtractionDto`) with `fieldConfidences` map and accessor methods.
+  - Added unit test in `ExtractionServiceTest.java` verifying deserialization and storage of field confidences (total tests increased to 28, all passing).
+  - Enhanced `DocumentDetail.jsx` with per-field confidence score badges (emerald for ≥85%, amber for 70-84%, red for <70%), an overall average confidence indicator in the header, and updated seeded demo documents in `V9__seed_demo_data.sql`.
 
 ## In Progress
 
-- Phase 12: Stretch Goals & Enterprise Enhancements — confidence scoring, async message queues, KYC form, billing simulation.
+- Phase 12: Stretch Goals & Enterprise Enhancements — async message queues, KYC form, billing simulation.
 
 ## Next Steps (in order)
 
-1. **Phase 12.2 (Field-Level Confidence Scoring):** Return confidence indicators per extracted field in JSON extraction payloads.
-2. **Phase 12.3 (Queue-Based Processing):** Offload OCR & LLM processing to background message queue (RabbitMQ / Kafka).
-3. **Phase 12.4 (Multi-Document Comparative Anomaly Detection):** Cross-document vendor trend anomalies.
+1. **Phase 12.3 (Queue-Based Processing):** Offload OCR & LLM processing to background message queue (RabbitMQ / Kafka).
+2. **Phase 12.4 (Multi-Document Comparative Anomaly Detection):** Cross-document vendor trend anomalies.
 
 
 ## Key Decisions & Why
@@ -577,3 +581,19 @@ pm run build).
   - Executed frontend production build (`npm run build`) — **Vite built client bundle in 1.43s, 0 errors**.
 - Files touched: `memory.md`.
 - Next session should: Proceed with Phase 12.2 (Field-level confidence scoring) or continue with deployment/live evaluation testing.
+
+### Session 39 — 2026-09-12
+- Implemented Phase 12.2: Field-Level Confidence Scoring across backend prompts, DTOs, tests, and frontend UI.
+- Backend:
+  - Updated `ExtractInvoicePrompt.java`, `ExtractContractPrompt.java`, and `ExtractResumePrompt.java` prompts and JSON schemas to request estimated probability scores (0.0 to 1.0) under a structured `fieldConfidences` object.
+  - Added `fieldConfidences` property (Map<String, Double>) with getters/setters to `InvoiceExtractionDto`, `ContractExtractionDto`, and `ResumeExtractionDto`.
+  - Updated `V9__seed_demo_data.sql` with realistic fieldConfidences values for seeded sample documents.
+- Frontend:
+  - Updated `DocumentDetail.jsx` with a `ConfidenceBadge` component displaying visual confidence pills (emerald for ≥85%, amber for 70-84%, red for <70%) on every extracted field and multi-item lists.
+  - Added an aggregate `avg conf` badge in the "Extracted Intelligence" card header.
+- Tests & Validation:
+  - Added `testExtractInvoiceFieldsWithFieldConfidences` unit test in `ExtractionServiceTest.java`.
+  - Executed `./mvnw test` — **28 tests passed, 0 failures**.
+  - Executed `npm run build` — **clean build in 386ms, 0 errors**.
+- Files touched: `ExtractInvoicePrompt.java`, `ExtractContractPrompt.java`, `ExtractResumePrompt.java`, `InvoiceExtractionDto.java`, `ContractExtractionDto.java`, `ResumeExtractionDto.java`, `ExtractionServiceTest.java`, `V9__seed_demo_data.sql`, `DocumentDetail.jsx`, `memory.md`.
+- Next session should: Proceed to Phase 12.3 (Queue-Based Processing) or Phase 12.4 (Multi-Document Comparative Anomaly Detection).

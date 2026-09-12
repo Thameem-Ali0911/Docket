@@ -133,4 +133,48 @@ class ExtractionServiceTest {
         verify(geminiClient, never()).generateStructuredJson(anyString(), anyString());
         verify(extractionRepository).save(any(Extraction.class));
     }
+
+    @Test
+    @DisplayName("Valid Gemini extraction with fieldConfidences deserializes and saves successfully")
+    void testExtractInvoiceFieldsWithFieldConfidences() throws Exception {
+        String jsonWithConfidences = """
+                {
+                    "vendorName": "Acme Inc",
+                    "invoiceNumber": "INV-2026-001",
+                    "invoiceDate": "2026-08-01",
+                    "dueDate": "2026-08-31",
+                    "totalAmount": "$1,250.00",
+                    "lineItems": [
+                        {
+                            "description": "Consulting Services",
+                            "quantity": "1",
+                            "unitPrice": "$1,250.00",
+                            "amount": "$1,250.00"
+                        }
+                    ],
+                    "fieldConfidences": {
+                        "vendorName": 0.98,
+                        "invoiceNumber": 0.95,
+                        "invoiceDate": 0.92,
+                        "dueDate": 0.85,
+                        "totalAmount": 0.99,
+                        "lineItems": 0.94
+                    }
+                }
+                """;
+
+        when(geminiClient.generateStructuredJson(anyString(), anyString())).thenReturn(jsonWithConfidences);
+        when(extractionRepository.findByDocumentId(101)).thenReturn(Optional.empty());
+
+        extractionService.extractInvoiceFields(document);
+
+        ArgumentCaptor<Extraction> captor = ArgumentCaptor.forClass(Extraction.class);
+        verify(extractionRepository).save(captor.capture());
+
+        Extraction saved = captor.getValue();
+        assertNotNull(saved);
+        assertNull(saved.getFailedReason());
+        assertTrue(saved.getFieldsJson().contains("fieldConfidences"));
+        assertTrue(saved.getFieldsJson().contains("0.98"));
+    }
 }

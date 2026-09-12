@@ -45,6 +45,8 @@ public class ResumeExtractionDto {
     @NotNull(message = "education is required")
     private String education;
 
+    private java.util.Map<String, Double> fieldConfidences;
+
     public String getCandidateName() { return candidateName; }
     public void setCandidateName(String candidateName) { this.candidateName = candidateName; }
 
@@ -62,4 +64,7 @@ public class ResumeExtractionDto {
 
     public String getEducation() { return education; }
     public void setEducation(String education) { this.education = education; }
+
+    public java.util.Map<String, Double> getFieldConfidences() { return fieldConfidences; }
+    public void setFieldConfidences(java.util.Map<String, Double> fieldConfidences) { this.fieldConfidences = fieldConfidences; }
 }

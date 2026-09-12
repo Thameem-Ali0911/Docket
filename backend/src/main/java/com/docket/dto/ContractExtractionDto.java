@@ -23,6 +23,8 @@ public class ContractExtractionDto {
     @NotNull(message = "totalValue is required")
     private String totalValue;
 
+    private java.util.Map<String, Double> fieldConfidences;
+
     public String getContractTitle() { return contractTitle; }
     public void setContractTitle(String contractTitle) { this.contractTitle = contractTitle; }
 
@@ -40,4 +42,7 @@ public class ContractExtractionDto {
 
     public String getTotalValue() { return totalValue; }
     public void setTotalValue(String totalValue) { this.totalValue = totalValue; }
+
+    public java.util.Map<String, Double> getFieldConfidences() { return fieldConfidences; }
+    public void setFieldConfidences(java.util.Map<String, Double> fieldConfidences) { this.fieldConfidences = fieldConfidences; }
 }

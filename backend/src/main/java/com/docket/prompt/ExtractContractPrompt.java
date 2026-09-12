@@ -15,6 +15,11 @@ public class ExtractContractPrompt {
             - governingLaw: The governing law or jurisdiction for the contract.
             - termOrDuration: The length, duration, or term of the contract.
             - totalValue: Any monetary value, contract amount, or total value mentioned.
+            
+            Also estimate an extraction confidence score between 0.0 and 1.0 for each extracted field
+            (contractTitle, parties, effectiveDate, governingLaw, termOrDuration, totalValue) in 'fieldConfidences'.
+            Higher scores (e.g. 0.90 - 1.0) indicate exact, unambiguous text matches; lower scores indicate
+            partial clarity or ambiguity.
             """;
 
     public static final String JSON_SCHEMA = """
@@ -41,6 +46,18 @@ public class ExtractContractPrompt {
                 },
                 "totalValue": {
                   "type": "string"
+                },
+                "fieldConfidences": {
+                  "type": "object",
+                  "description": "Confidence scores between 0.0 and 1.0 for each field.",
+                  "properties": {
+                    "contractTitle": { "type": "number" },
+                    "parties": { "type": "number" },
+                    "effectiveDate": { "type": "number" },
+                    "governingLaw": { "type": "number" },
+                    "termOrDuration": { "type": "number" },
+                    "totalValue": { "type": "number" }
+                  }
                 }
               },
               "required": [

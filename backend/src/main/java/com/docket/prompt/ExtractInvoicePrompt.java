@@ -18,6 +18,11 @@ public final class ExtractInvoicePrompt {
 
             Return amounts and dates exactly as they appear in the source text (do not reformat or
             normalize them).
+            
+            Also estimate an extraction confidence score between 0.0 and 1.0 for each extracted field
+            (vendorName, invoiceNumber, invoiceDate, dueDate, totalAmount, lineItems) in 'fieldConfidences'.
+            Higher scores (e.g. 0.90 - 1.0) indicate exact, unambiguous text matches; lower scores indicate
+            partial clarity or ambiguity.
 
             INVOICE TEXT:
             ---
@@ -48,6 +53,18 @@ public final class ExtractInvoicePrompt {
                   "amount": { "type": "string" }
                 },
                 "required": ["description"]
+              }
+            },
+            "fieldConfidences": {
+              "type": "object",
+              "description": "Confidence scores between 0.0 and 1.0 for each field.",
+              "properties": {
+                "vendorName": { "type": "number" },
+                "invoiceNumber": { "type": "number" },
+                "invoiceDate": { "type": "number" },
+                "dueDate": { "type": "number" },
+                "totalAmount": { "type": "number" },
+                "lineItems": { "type": "number" }
               }
             }
           },

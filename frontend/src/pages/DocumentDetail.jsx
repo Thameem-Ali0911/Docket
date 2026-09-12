@@ -360,12 +360,28 @@ export default function DocumentDetail() {
                                     <div className="flex items-center gap-2">
                                         <Sparkles size={15} className="text-purple-400" />
                                         <h3 className="text-sm font-semibold text-gray-300">Extracted Intelligence</h3>
-                                        {extraction?.humanCorrectedJson && (
+                                        {extraction?.humanCorrectedJson ? (
                                             <span className="text-[10px] px-1.5 py-0.5 rounded font-semibold"
                                                   style={{ background: 'rgba(52,211,153,0.15)', color: '#34d399' }}>
                                                 HUMAN CORRECTED
                                             </span>
-                                        )}
+                                        ) : fields?.fieldConfidences && Object.keys(fields.fieldConfidences).length > 0 ? (
+                                            (() => {
+                                                const vals = Object.values(fields.fieldConfidences).filter(v => typeof v === 'number');
+                                                if (vals.length === 0) return null;
+                                                const avg = Math.round((vals.reduce((a, b) => a + b, 0) / vals.length) * 100);
+                                                const color = avg >= 85 ? '#34d399' : avg >= 70 ? '#fbbf24' : '#f87171';
+                                                const bg = avg >= 85 ? 'rgba(52,211,153,0.12)' : avg >= 70 ? 'rgba(251,191,36,0.12)' : 'rgba(248,113,113,0.12)';
+                                                return (
+                                                    <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold flex items-center gap-1"
+                                                          style={{ background: bg, color: color, border: `1px solid ${color}33` }}
+                                                          title="Average AI field extraction confidence score">
+                                                        <span className="w-1.5 h-1.5 rounded-full" style={{ background: color }} />
+                                                        {avg}% avg conf
+                                                    </span>
+                                                );
+                                            })()
+                                        ) : null}
                                     </div>
                                     {fields && !editingFields && (
                                         <button
@@ -557,21 +573,27 @@ function ExtractionFields({ type, fields }) {
 }
 
 function InvoiceFields({ fields }) {
+    const conf = fields.fieldConfidences || {};
     return (
         <>
             <dl className="grid gap-3 mb-6 grid-cols-2">
-                <Field label="Vendor"        value={fields.vendorName} />
-                <Field label="Invoice #"     value={fields.invoiceNumber} />
-                <Field label="Invoice Date"  value={fields.invoiceDate} />
-                <Field label="Due Date"      value={fields.dueDate} />
+                <Field label="Vendor"        value={fields.vendorName}   confidence={conf.vendorName} />
+                <Field label="Invoice #"     value={fields.invoiceNumber} confidence={conf.invoiceNumber} />
+                <Field label="Invoice Date"  value={fields.invoiceDate}   confidence={conf.invoiceDate} />
+                <Field label="Due Date"      value={fields.dueDate}       confidence={conf.dueDate} />
                 <div className="col-span-2">
-                    <Field label="Total Amount" value={fields.totalAmount} bold />
+                    <Field label="Total Amount" value={fields.totalAmount} confidence={conf.totalAmount} bold />
                 </div>
             </dl>
 
             {Array.isArray(fields.lineItems) && fields.lineItems.length > 0 && (
                 <div className="mt-4">
-                    <SectionHeader>Line Items</SectionHeader>
+                    <div className="flex items-center justify-between mb-2">
+                        <SectionHeader>Line Items</SectionHeader>
+                        {typeof conf.lineItems === 'number' && (
+                            <ConfidenceBadge score={conf.lineItems} />
+                        )}
+                    </div>
                     <div className="rounded-lg overflow-hidden border" style={{ borderColor: 'var(--color-border)' }}>
                         <table className="w-full text-left border-collapse text-xs" aria-label="Invoice line items">
                             <thead>
@@ -601,21 +623,27 @@ function InvoiceFields({ fields }) {
 }
 
 function ContractFields({ fields }) {
+    const conf = fields.fieldConfidences || {};
     return (
         <>
             <dl className="grid gap-3 mb-6 grid-cols-2">
                 <div className="col-span-2">
-                    <Field label="Contract Title" value={fields.contractTitle} bold />
+                    <Field label="Contract Title" value={fields.contractTitle} confidence={conf.contractTitle} bold />
                 </div>
-                <Field label="Effective Date"  value={fields.effectiveDate} />
-                <Field label="Term / Duration" value={fields.termOrDuration} />
-                <Field label="Governing Law"   value={fields.governingLaw} />
-                <Field label="Total Value"     value={fields.totalValue} />
+                <Field label="Effective Date"  value={fields.effectiveDate}  confidence={conf.effectiveDate} />
+                <Field label="Term / Duration" value={fields.termOrDuration} confidence={conf.termOrDuration} />
+                <Field label="Governing Law"   value={fields.governingLaw}   confidence={conf.governingLaw} />
+                <Field label="Total Value"     value={fields.totalValue}     confidence={conf.totalValue} />
             </dl>
 
             {Array.isArray(fields.parties) && fields.parties.length > 0 && (
                 <div className="mb-4">
-                    <SectionHeader>Involved Parties</SectionHeader>
+                    <div className="flex items-center justify-between mb-2">
+                        <SectionHeader>Involved Parties</SectionHeader>
+                        {typeof conf.parties === 'number' && (
+                            <ConfidenceBadge score={conf.parties} />
+                        )}
+                    </div>
                     <ul className="text-sm space-y-1 pl-4 list-disc text-gray-300">
                         {fields.parties.map((p, i) => <li key={i}>{p}</li>)}
                     </ul>
@@ -626,22 +654,28 @@ function ContractFields({ fields }) {
 }
 
 function ResumeFields({ fields }) {
+    const conf = fields.fieldConfidences || {};
     return (
         <>
             <dl className="grid gap-3 mb-6 grid-cols-2">
                 <div className="col-span-2">
-                    <Field label="Candidate Name" value={fields.candidateName} bold />
+                    <Field label="Candidate Name" value={fields.candidateName} confidence={conf.candidateName} bold />
                 </div>
-                <Field label="Email"     value={fields.email} />
-                <Field label="Phone"     value={fields.phone} />
+                <Field label="Email"     value={fields.email} confidence={conf.email} />
+                <Field label="Phone"     value={fields.phone} confidence={conf.phone} />
                 <div className="col-span-2">
-                    <Field label="Education" value={fields.education} />
+                    <Field label="Education" value={fields.education} confidence={conf.education} />
                 </div>
             </dl>
 
             {Array.isArray(fields.skills) && fields.skills.length > 0 && (
                 <div className="mb-5">
-                    <SectionHeader>Extracted Skills</SectionHeader>
+                    <div className="flex items-center justify-between mb-2">
+                        <SectionHeader>Extracted Skills</SectionHeader>
+                        {typeof conf.skills === 'number' && (
+                            <ConfidenceBadge score={conf.skills} />
+                        )}
+                    </div>
                     <div className="flex flex-wrap gap-1.5 mt-2">
                         {fields.skills.map((s, i) => (
                             <span key={i} className="badge badge-info" style={{ fontSize: '11px' }}>{s}</span>
@@ -652,7 +686,12 @@ function ResumeFields({ fields }) {
 
             {Array.isArray(fields.experience) && fields.experience.length > 0 && (
                 <div>
-                    <SectionHeader>Experience History</SectionHeader>
+                    <div className="flex items-center justify-between mb-2">
+                        <SectionHeader>Experience History</SectionHeader>
+                        {typeof conf.experience === 'number' && (
+                            <ConfidenceBadge score={conf.experience} />
+                        )}
+                    </div>
                     <div className="rounded-lg overflow-hidden border mt-2" style={{ borderColor: 'var(--color-border)' }}>
                         <table className="w-full text-left border-collapse text-xs" aria-label="Work experience history">
                             <thead>
@@ -679,20 +718,42 @@ function ResumeFields({ fields }) {
     );
 }
 
+function ConfidenceBadge({ score }) {
+    if (typeof score !== 'number') return null;
+    const pct = Math.round(score * 100);
+    const color = pct >= 85 ? '#34d399' : pct >= 70 ? '#fbbf24' : '#f87171';
+    const bg = pct >= 85 ? 'rgba(52,211,153,0.12)' : pct >= 70 ? 'rgba(251,191,36,0.12)' : 'rgba(248,113,113,0.12)';
+    return (
+        <span
+            className="text-[10px] px-1.5 py-0.5 rounded font-mono font-medium flex items-center gap-1"
+            style={{ background: bg, color: color, border: `1px solid ${color}33` }}
+            title={`Extraction confidence: ${pct}%`}
+        >
+            <span className="w-1 h-1 rounded-full" style={{ background: color }} />
+            {pct}%
+        </span>
+    );
+}
+
 function SectionHeader({ children }) {
     return (
-        <h4 className="mb-2 text-xs font-bold text-gray-400 uppercase tracking-wider">
+        <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider">
             {children}
         </h4>
     );
 }
 
-function Field({ label, value, bold }) {
+function Field({ label, value, confidence, bold }) {
     return (
         <div className="p-3 rounded-lg border" style={{ background: 'var(--color-surface-raised)', borderColor: 'var(--color-border)' }}>
-            <dt className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-1">
-                {label}
-            </dt>
+            <div className="flex items-center justify-between mb-1">
+                <dt className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider">
+                    {label}
+                </dt>
+                {typeof confidence === 'number' && (
+                    <ConfidenceBadge score={confidence} />
+                )}
+            </div>
             <dd className={`text-white ${bold ? 'text-lg font-bold text-cyan-300' : 'text-sm font-normal'}`}>
                 {value || '—'}
             </dd>

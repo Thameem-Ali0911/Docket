@@ -1,4 +1,4 @@
--- Phase 11: Seed initial demo workspace, user, templates, and sample documents
+.-- Phase 11: Seed initial demo workspace, user, templates, and sample documents
 -- This enables evaluators, demo viewers, and judges to log in immediately
 -- with pre-loaded intelligence without needing local OCR or an active Gemini key.
 
@@ -43,7 +43,7 @@ BEGIN
         INSERT INTO extractions (document_id, fields_json, created_at)
         VALUES (
             doc1_id,
-            '{"vendorName":"Apex Cloud Systems Inc.","invoiceNumber":"INV-2026-8891","invoiceDate":"2026-08-10","dueDate":"2026-08-25","totalAmount":"$14,850.00","lineItems":[{"description":"Dedicated GPU Cluster (H100 x 8)","quantity":"1","unitPrice":"$12,500.00","amount":"$12,500.00"},{"description":"High-Speed VPC Interconnect","quantity":"1","unitPrice":"$2,350.00","amount":"$2,350.00"}]}',
+            '{"vendorName":"Apex Cloud Systems Inc.","invoiceNumber":"INV-2026-8891","invoiceDate":"2026-08-10","dueDate":"2026-08-25","totalAmount":"$14,850.00","lineItems":[{"description":"Dedicated GPU Cluster (H100 x 8)","quantity":"1","unitPrice":"$12,500.00","amount":"$12,500.00"},{"description":"High-Speed VPC Interconnect","quantity":"1","unitPrice":"$2,350.00","amount":"$2,350.00"}],"fieldConfidences":{"vendorName":0.99,"invoiceNumber":0.98,"invoiceDate":0.95,"dueDate":0.92,"totalAmount":0.99,"lineItems":0.96}}',
             now() - interval '2 days'
         );
 
@@ -81,7 +81,7 @@ BEGIN
         INSERT INTO extractions (document_id, fields_json, created_at)
         VALUES (
             doc2_id,
-            '{"contractTitle":"Master Services Agreement (MSA)","effectiveDate":"2026-09-01","termOrDuration":"12 Months","governingLaw":"State of California","totalValue":"$240,000.00","parties":["Acme Global Demo","Nexus Logistics Inc."]}',
+            '{"contractTitle":"Master Services Agreement (MSA)","effectiveDate":"2026-09-01","termOrDuration":"12 Months","governingLaw":"State of California","totalValue":"$240,000.00","parties":["Acme Global Demo","Nexus Logistics Inc."],"fieldConfidences":{"contractTitle":0.98,"parties":0.96,"effectiveDate":0.97,"governingLaw":0.95,"termOrDuration":0.91,"totalValue":0.99}}',
             now() - interval '1 day'
         );
 
@@ -119,7 +119,7 @@ BEGIN
         INSERT INTO extractions (document_id, fields_json, created_at)
         VALUES (
             doc3_id,
-            '{"candidateName":"Alex Chen","email":"alex.chen@example.com","phone":"(555) 234-8901","education":"B.S. in Computer Science, Stanford University","skills":["Java","Spring Boot","React","TypeScript","PostgreSQL","Docker","Kubernetes","AWS","REST APIs"],"experience":[{"company":"CloudScale Labs","role":"Senior Software Engineer","duration":"2023 - Present"},{"company":"DataForge Corp","role":"Full Stack Engineer","duration":"2020 - 2023"}]}',
+            '{"candidateName":"Alex Chen","email":"alex.chen@example.com","phone":"(555) 234-8901","education":"B.S. in Computer Science, Stanford University","skills":["Java","Spring Boot","React","TypeScript","PostgreSQL","Docker","Kubernetes","AWS","REST APIs"],"experience":[{"company":"CloudScale Labs","role":"Senior Software Engineer","duration":"2023 - Present"},{"company":"DataForge Corp","role":"Full Stack Engineer","duration":"2020 - 2023"}],"fieldConfidences":{"candidateName":0.99,"email":0.98,"phone":0.95,"education":0.94,"skills":0.96,"experience":0.93}}',
             now() - interval '4 hours'
         );
 

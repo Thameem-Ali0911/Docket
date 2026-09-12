@@ -32,6 +32,8 @@ public class InvoiceExtractionDto {
     @Valid
     private List<LineItem> lineItems;
 
+    private java.util.Map<String, Double> fieldConfidences;
+
     public static class LineItem {
         @NotBlank
         private String description;
@@ -61,4 +63,6 @@ public class InvoiceExtractionDto {
     public void setTotalAmount(String totalAmount) { this.totalAmount = totalAmount; }
     public List<LineItem> getLineItems() { return lineItems; }
     public void setLineItems(List<LineItem> lineItems) { this.lineItems = lineItems; }
+    public java.util.Map<String, Double> getFieldConfidences() { return fieldConfidences; }
+    public void setFieldConfidences(java.util.Map<String, Double> fieldConfidences) { this.fieldConfidences = fieldConfidences; }
 }
