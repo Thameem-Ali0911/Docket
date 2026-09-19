@@ -4,8 +4,11 @@ import java.time.OffsetDateTime;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.core.io.Resource;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
@@ -39,6 +42,8 @@ import com.docket.repository.UserRepository;
 @Service
 public class DocumentService {
 
+    private static final Logger log = LoggerFactory.getLogger(DocumentService.class);
+
     private final DocumentRepository documentRepository;
     private final UserRepository userRepository;
     private final StorageService storageService;
@@ -48,6 +53,7 @@ public class DocumentService {
     private final SummaryRepository summaryRepository;
     private final ExportService exportService;
     private final LlmBudgetService llmBudgetService;
+    private final Optional<DocumentQueuePublisher> queuePublisher;
 
     public DocumentService(DocumentRepository documentRepository,
                            UserRepository userRepository,
@@ -57,7 +63,8 @@ public class DocumentService {
                            ExtractionRepository extractionRepository,
                            SummaryRepository summaryRepository,
                            ExportService exportService,
-                           LlmBudgetService llmBudgetService) {
+                           LlmBudgetService llmBudgetService,
+                           Optional<DocumentQueuePublisher> queuePublisher) {
         this.documentRepository = documentRepository;
         this.userRepository = userRepository;
         this.storageService = storageService;
@@ -67,6 +74,7 @@ public class DocumentService {
         this.summaryRepository = summaryRepository;
         this.exportService = exportService;
         this.llmBudgetService = llmBudgetService;
+        this.queuePublisher = queuePublisher;
     }
 
     public Document uploadDocument(Integer userId, DocumentType type, MultipartFile file) {
@@ -78,8 +86,8 @@ public class DocumentService {
         Document doc = new Document(user.getWorkspace(), type, fileUrl, DocumentStatus.PENDING);
         doc = documentRepository.save(doc);
 
-        // Process OCR asynchronously
-        documentProcessingService.processDocumentAsync(doc);
+        // Dispatch for processing (queue or async depending on config)
+        dispatchProcessing(doc);
 
         return doc;
     }
@@ -122,7 +130,7 @@ public class DocumentService {
         List<Document> savedDocs = documentRepository.saveAll(documents);
 
         for (Document doc : savedDocs) {
-            documentProcessingService.processDocumentAsync(doc);
+            dispatchProcessing(doc);
         }
 
         return savedDocs;
@@ -249,8 +257,20 @@ public class DocumentService {
         doc.setFailedReason(null);
         doc = documentRepository.save(doc);
 
-        documentProcessingService.processDocumentAsync(doc);
+        dispatchProcessing(doc);
         return doc;
+    }
+
+    /**
+     * Dispatches a document for processing via RabbitMQ queue (if available) or
+     * the @Async thread pool (default fallback).
+     */
+    private void dispatchProcessing(Document doc) {
+        if (queuePublisher.isPresent()) {
+            queuePublisher.get().publish(doc);
+        } else {
+            documentProcessingService.processDocumentAsync(doc);
+        }
     }
 
     public Extraction getExtractionForWorkspace(Integer userId, Integer documentId) {

@@ -47,4 +47,21 @@ springdoc:
   info:
     title: Docket API
     description: Document intelligence platform — structured field extraction, summarization, anomaly detection
-    version: 1.0.0
+    version: 1.0.0
+
+# --- Queue-Based Processing (Phase 12.3) ---
+# mode: "async" (default) = Spring @Async thread pool, no RabbitMQ needed
+#        "queue"           = RabbitMQ message queue, requires a running broker
+docket:
+  processing:
+    mode: ${PROCESSING_MODE:async}
+
+spring.rabbitmq:
+  host: ${SPRING_RABBITMQ_HOST:localhost}
+  port: ${SPRING_RABBITMQ_PORT:5672}
+  username: ${RABBITMQ_DEFAULT_USER:guest}
+  password: ${RABBITMQ_DEFAULT_PASS:guest}
+
+# Disable RabbitMQ auto-config when not using queue mode — prevents connection
+# refused errors on startup when no broker is running (local dev without Docker).
+spring.autoconfigure.exclude: ${RABBITMQ_AUTOCONFIG_EXCLUDE:org.springframework.boot.autoconfigure.amqp.RabbitAutoConfiguration}

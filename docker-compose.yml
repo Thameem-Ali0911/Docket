@@ -16,6 +16,22 @@ services:
       timeout: 5s
       retries: 10
 
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    restart: unless-stopped
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_USER:-guest}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_DEFAULT_PASS:-guest}
+    ports:
+      - "5672:5672"    # AMQP protocol
+      - "15672:15672"  # Management UI (http://localhost:15672)
+    healthcheck:
+      test: [ "CMD", "rabbitmq-diagnostics", "-q", "check_running" ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+
   backend:
     build:
       context: ./backend
@@ -23,12 +39,21 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/docket
       SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-postgres}
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-root}
       JWT_SECRET: ${JWT_SECRET:-dev-only-insecure-secret-change-me}
       GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      # Queue-based processing (Phase 12.3)
+      PROCESSING_MODE: queue
+      SPRING_RABBITMQ_HOST: rabbitmq
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_USER:-guest}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_DEFAULT_PASS:-guest}
+      # Override the auto-config exclusion so Spring AMQP connects to RabbitMQ
+      RABBITMQ_AUTOCONFIG_EXCLUDE: ""
     ports:
       - "8080:8080"
     volumes:

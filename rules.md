@@ -17,17 +17,18 @@
 ## 2. Approved Libraries / Stack (do not deviate without updating architecture.md)
 
 - Frontend: React, Vite, Tailwind CSS, React Router, TanStack Query, Recharts, Framer Motion (`motion`), React Three Fiber + drei (approved Phase 8.5, scoped per design.md §8 — do not use Three.js/R3F inside data tables, forms, or anywhere it would hurt readability or accessibility)
-- Backend: Java 17+, Spring Boot 3.x, Spring Web, Spring Data JPA (Hibernate), Spring Security, Spring Boot Actuator, springdoc-openapi, Flyway, Jackson, Bean Validation
+- Backend: Java 17+, Spring Boot 3.x, Spring Web, Spring Data JPA (Hibernate), Spring Security, Spring Boot Actuator, springdoc-openapi, Flyway, Jackson, Bean Validation, Spring AMQP / RabbitMQ (approved Phase 12.3 stretch — queue processing with @Async fallback)
 - Build tool: Maven (or Gradle — pick one, do not mix)
 - OCR: Tess4J (+ native Tesseract engine and `tessdata`)
 - PDF parsing: Apache PDFBox
 - DB: PostgreSQL (via Spring Data JPA / JDBC driver)
+- Message Queue (optional / stretch): RabbitMQ via Spring AMQP (`spring-boot-starter-amqp`) with `docket.processing.mode` toggle (queue vs. async)
 - Auth: Spring Security + jjwt (JWT), `BCryptPasswordEncoder`
 - LLM: Google Gemini API called via Spring's `RestClient`/`WebClient` (no official Java SDK dependency added — use a thin typed wrapper class, see architecture.md §3.6)
 - Testing: JUnit 5, Spring Boot Test, Mockito (backend); Vitest, React Testing Library (frontend)
 - Local dev/orchestration: Docker + Docker Compose (see `docker-compose.yml`, `backend/Dockerfile`, `frontend/Dockerfile`) — this is tooling, not application scope, so it doesn't change the runtime stack above
 
-**Do not** add: a second frontend framework, a second backend language/framework, a second database, a message queue (Kafka/RabbitMQ), or any paid third-party API (cloud OCR, cloud NLP) unless explicitly requested and reflected in architecture.md first.
+**Do not** add: a second frontend framework, a second backend language/framework, a second database, or any paid third-party API (cloud OCR, cloud NLP) unless explicitly requested and reflected in architecture.md first.
 
 ## 3. AI / LLM Prompt Boundaries
 

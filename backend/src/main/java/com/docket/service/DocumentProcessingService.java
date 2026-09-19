@@ -41,14 +41,33 @@ public class DocumentProcessingService {
         this.llmBudgetService = llmBudgetService;
     }
 
+    /**
+     * Thin @Async wrapper — used in "async" mode (default) where uploads trigger
+     * processing on Spring's bounded ThreadPoolTaskExecutor.
+     *
+     * <p>In "queue" mode, {@link DocumentProcessingConsumer} calls
+     * {@link #processDocument(Document)} directly instead of this method,
+     * since the RabbitMQ listener thread is already the worker thread.</p>
+     */
     @Async
     public void processDocumentAsync(Document doc) {
-        // IMPORTANT: catches Throwable, not just Exception. Native OCR bindings (Tess4J/JNI)
-        // can throw Errors (UnsatisfiedLinkError, NoClassDefFoundError, etc.) on misconfigured
-        // environments, and a plain `catch (Exception e)` here lets those escape the async
-        // thread silently - the document row never gets saved and stays PENDING forever with
-        // no error surfaced anywhere. Catching Throwable guarantees we always reach the save
-        // below and the document always ends up in a terminal, visible state.
+        processDocument(doc);
+    }
+
+    /**
+     * Core synchronous processing pipeline: OCR → field extraction → summarization → anomaly check.
+     *
+     * <p>Called by:
+     * <ul>
+     *   <li>{@link #processDocumentAsync(Document)} in async mode</li>
+     *   <li>{@link DocumentProcessingConsumer#onMessage} in queue mode</li>
+     * </ul>
+     *
+     * <p>Catches {@code Throwable} (not just {@code Exception}) because native OCR bindings
+     * (Tess4J/JNI) can throw {@code Error}s on misconfigured environments. The document
+     * always ends up in a terminal, visible state.</p>
+     */
+    public void processDocument(Document doc) {
         try {
             File savedFile = storageService.getFile(doc.getFileUrl());
             if (savedFile != null && savedFile.exists() && savedFile.isFile()) {
@@ -136,3 +155,4 @@ public class DocumentProcessingService {
         return t.getClass().getSimpleName() + (message != null ? ": " + message : "");
     }
 }
+

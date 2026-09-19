@@ -67,7 +67,8 @@ class DocumentServiceTest {
                 extractionRepository,
                 summaryRepository,
                 exportService,
-                llmBudgetService
+                llmBudgetService,
+                Optional.empty()
         );
 
         workspace = new Workspace("Acme Workspace");
@@ -168,5 +169,37 @@ class DocumentServiceTest {
         assertEquals(201, result.get(0).getId());
         assertEquals(202, result.get(1).getId());
         verify(documentProcessingService, times(2)).processDocumentAsync(any(Document.class));
+    }
+
+    @Test
+    @DisplayName("uploadDocument dispatches to RabbitMQ when queue publisher is present")
+    void testUploadDocumentWithQueuePublisher() throws Exception {
+        DocumentQueuePublisher publisher = mock(DocumentQueuePublisher.class);
+        DocumentService queueModeService = new DocumentService(
+                documentRepository,
+                userRepository,
+                storageService,
+                documentProcessingService,
+                anomalyFlagRepository,
+                extractionRepository,
+                summaryRepository,
+                exportService,
+                llmBudgetService,
+                Optional.of(publisher)
+        );
+
+        MockMultipartFile file = new MockMultipartFile("file", "invoice.pdf", "application/pdf", "dummy pdf content".getBytes());
+        when(userRepository.findById(10)).thenReturn(Optional.of(user));
+        when(storageService.store(file)).thenReturn("/uploads/uuid_invoice.pdf");
+
+        Document savedDoc = new Document(workspace, DocumentType.INVOICE, "/uploads/uuid_invoice.pdf", DocumentStatus.PENDING);
+        setEntityId(savedDoc, 101);
+        when(documentRepository.save(any(Document.class))).thenReturn(savedDoc);
+
+        Document result = queueModeService.uploadDocument(10, DocumentType.INVOICE, file);
+
+        assertNotNull(result);
+        verify(publisher).publish(savedDoc);
+        verify(documentProcessingService, never()).processDocumentAsync(any());
     }
 }

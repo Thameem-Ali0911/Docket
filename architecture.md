@@ -83,9 +83,12 @@
 - Driver: standard **PostgreSQL JDBC driver**, managed automatically via Spring Data JPA
 - Hosted free-tier options: Supabase, Neon, or Railway Postgres
 
-### 3.4 Async Job Processing
-- MVP simplicity: process synchronously inside the request thread, or offload with Spring's built-in `@Async` + a `ThreadPoolTaskExecutor` (no extra infra needed) since docs are short and demo-scale
-- If time permits (stretch): introduce a real queue — **Spring Kafka** or a simpler **RabbitMQ + Spring AMQP** setup — so uploads return immediately and processing happens in a background consumer
+### 3.4 Async & Queue Job Processing (Dual-Mode)
+- **Dual-Mode Processing Architecture:**
+  - Controlled by the `docket.processing.mode` configuration property (env var `PROCESSING_MODE`, defaults to `async`).
+  - **`async` mode (default):** Uses Spring's built-in `@Async` with a dedicated `ThreadPoolTaskExecutor` (`AsyncConfig.java` — 4 core / 16 max / 100 queue capacity) and `@Scheduled` reconciliation scheduler (`DocumentReconciliationScheduler`). Requires zero external message brokers — ideal for lightweight local development.
+  - **`queue` mode (RabbitMQ):** Uses Spring AMQP (`spring-boot-starter-amqp`) with a durable `DirectExchange` (`docket.exchange`), queue (`docket.document.processing`), and Jackson JSON message conversion (`RabbitMqConfig.java`). Uploads publish a lightweight `DocumentProcessingMessage(documentId)` via `DocumentQueuePublisher`. Background workers consume messages via `@RabbitListener` in `DocumentProcessingConsumer`, invoking the synchronous `processDocument()` pipeline with automatic ACK and error isolation.
+- Both modes share the identical OCR → extraction → summarization → anomaly detection pipeline and reconciliation fallback.
 
 ### 3.5 OCR & PDF Parsing
 - **Tess4J** (Java wrapper around the Tesseract OCR engine) for scanned image/PDF pages — free, open-source, sufficient for typed documents
@@ -300,7 +303,8 @@ docker compose up --build
 
 This starts:
 - `db` — Postgres 16, with a named volume (`docket_pgdata`) so data survives restarts
-- `backend` — built from `backend/Dockerfile` (multi-stage: Maven build → Temurin JRE runtime, with the native Tesseract engine installed for OCR), on `http://localhost:8080`
+- `rabbitmq` — RabbitMQ 3 Management Alpine, message broker on port 5672 and web management dashboard on `http://localhost:15672` (guest/guest)
+- `backend` — built from `backend/Dockerfile` (multi-stage: Maven build → Temurin JRE runtime, with the native Tesseract engine installed for OCR), on `http://localhost:8080` (configured with `PROCESSING_MODE=queue`)
 - `frontend` — built from `frontend/Dockerfile` (multi-stage: `npm run build` → served by nginx), on `http://localhost:5173`
 
 The backend reads `SPRING_DATASOURCE_URL`/`_USERNAME`/`_PASSWORD`, `JWT_SECRET`, and `GEMINI_API_KEY` from environment variables (see `backend/src/main/resources/application.yml` — all have safe local-dev defaults so `mvn spring-boot:run` against a local Postgres still works unchanged). The frontend's `VITE_API_BASE_URL` is a **build-time** arg (Vite bakes env vars into the JS bundle), passed through from `.env` via `docker-compose.yml`.

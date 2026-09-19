@@ -17,8 +17,8 @@
 ## Current Status
 
 - **Active Phase:** Phase 12 — Stretch Goals & Enterprise Enhancements
-- **Last Updated:** 2026-09-12
-- **Overall Progress:** ~98% — Phases 0–11 complete, Phase 12.1 (Batch Upload) and Phase 12.2 (Field-Level Confidence Scoring) complete. 28 passing automated tests, frontend builds cleanly.
+- **Last Updated:** 2026-09-19
+- **Overall Progress:** ~99% — Phases 0–11 complete, Phase 12.1 (Batch Upload), Phase 12.2 (Field-Level Confidence Scoring), and Phase 12.3 (Queue-Based Processing with RabbitMQ) complete. 33 passing automated tests, frontend builds cleanly.
 
 ## Completed
 
@@ -103,14 +103,27 @@
   - Added unit test in `ExtractionServiceTest.java` verifying deserialization and storage of field confidences (total tests increased to 28, all passing).
   - Enhanced `DocumentDetail.jsx` with per-field confidence score badges (emerald for ≥85%, amber for 70-84%, red for <70%), an overall average confidence indicator in the header, and updated seeded demo documents in `V9__seed_demo_data.sql`.
 
+- [x] Phase 12.3: Queue-Based Processing (RabbitMQ + Spring AMQP) (Session 40):
+  - Added `spring-boot-starter-amqp` to `pom.xml`, with connection configuration in `application.yml` and RabbitMQ service (`rabbitmq:3-management-alpine`) in `docker-compose.yml` (ports 5672 & 15672).
+  - Implemented dual-mode processing toggle (`docket.processing.mode` = `queue` or `async`, default `async`): app functions fully without RabbitMQ installed locally for dev ease, while supporting queue-backed durability in Docker/production.
+  - Created `RabbitMqConfig.java` defining durable `docket.document.processing` queue, `docket.exchange`, routing key, and Jackson `MessageConverter`.
+  - Created lightweight `DocumentProcessingMessage(documentId)` payload DTO to avoid entity serialization issues.
+  - Created `DocumentQueuePublisher.java` (`@ConditionalOnProperty(mode=queue)`) to publish tasks to RabbitMQ.
+  - Created `DocumentProcessingConsumer.java` (`@RabbitListener`) to consume messages and execute synchronous pipeline with ACK and missing document safety.
+  - Refactored `DocumentProcessingService.java` to extract synchronous `processDocument()` worker method while preserving `@Async` `processDocumentAsync()` wrapper.
+  - Updated `DocumentService.java` and `DocumentReconciliationScheduler.java` with conditional dispatch (`Optional<DocumentQueuePublisher>`).
+  - Added unit tests in `DocumentProcessingConsumerTest.java`, `DocumentQueuePublisherTest.java`, and updated `DocumentServiceTest.java` and `WorkspaceIsolationTest.java` (total automated tests increased to 33, 100% passing).
+  - Updated `rules.md` and `architecture.md` to formally document RabbitMQ + Spring AMQP dual-mode architecture.
+
 ## In Progress
 
-- Phase 12: Stretch Goals & Enterprise Enhancements — async message queues, KYC form, billing simulation.
+- Phase 12: Stretch Goals & Enterprise Enhancements — Phase 12.4 (Multi-Document Comparative Anomaly Detection), KYC form, billing simulation.
 
 ## Next Steps (in order)
 
-1. **Phase 12.3 (Queue-Based Processing):** Offload OCR & LLM processing to background message queue (RabbitMQ / Kafka).
-2. **Phase 12.4 (Multi-Document Comparative Anomaly Detection):** Cross-document vendor trend anomalies.
+1. **Phase 12.4 (Multi-Document Comparative Anomaly Detection):** Cross-document vendor trend anomalies and aggregate pattern analysis across invoices/contracts.
+2. **Phase 12.5 (4th Document Type - KYC Form):** Add KYC form type, validation rules, extraction prompt/DTO.
+3. **Phase 12.6 (Billing Simulation):** Mock subscription tiers / Stripe webhook simulator.
 
 
 ## Key Decisions & Why
@@ -125,6 +138,7 @@
 | Tess4J over cloud OCR APIs | Free, no per-page cost, sufficient for MVP's "clean/typed documents" scope | architecture.md §7 |
 | Switched LLM provider from Anthropic (Claude) to Google Gemini | User has a Gemini API key, not an Anthropic one; no LLM code was written yet (Phase 4 not started), so this was a docs/config-only rename with no migration cost | architecture.md §3.6, prd.md, rules.md §2, phases.md Phase 4 — see Session 6 |
 | Phase Plan Expansion (Phases 9 & 10 inserted; Deployment & Stretch moved to 11 & 12) | Rigorous architectural evaluation (`Docket_Evaluation_Report.md`) identified production gaps (unauthenticated file access, zero tests, triplicated code, lack of pagination, missing DB index); formal phases inserted to remediate all gaps to senior SWE bar | phases.md Phase 9 & 10, memory.md — Session 33 |
+| Dual-mode queue & async processing (Phase 12.3) | Allows running without RabbitMQ in lightweight local-dev while enabling durable, horizontally scalable queue processing in Docker/production via `docket.processing.mode` | architecture.md §3.4, rules.md §2, RabbitMqConfig.java |
 
 ## Known Issues / Gotchas
 
@@ -597,3 +611,35 @@ pm run build).
   - Executed `npm run build` — **clean build in 386ms, 0 errors**.
 - Files touched: `ExtractInvoicePrompt.java`, `ExtractContractPrompt.java`, `ExtractResumePrompt.java`, `InvoiceExtractionDto.java`, `ContractExtractionDto.java`, `ResumeExtractionDto.java`, `ExtractionServiceTest.java`, `V9__seed_demo_data.sql`, `DocumentDetail.jsx`, `memory.md`.
 - Next session should: Proceed to Phase 12.3 (Queue-Based Processing) or Phase 12.4 (Multi-Document Comparative Anomaly Detection).
+
+### Session 40 — 2026-09-19
+- Implemented Phase 12.3: Queue-Based Processing (RabbitMQ + Spring AMQP) with dual-mode fallback (`docket.processing.mode` = `queue` or `async`, default `async`).
+- Backend Infrastructure:
+  - Added `spring-boot-starter-amqp` to `pom.xml`.
+  - Configured RabbitMQ connection properties and default queue/exchange bindings in `application.yml`.
+  - Added `rabbitmq:3-management-alpine` service with healthcheck and web UI (:15672) to `docker-compose.yml` and updated `.env.example`.
+  - Created `RabbitMqConfig.java` defining durable exchange, queue, and Jackson `MessageConverter`.
+  - Created `DocumentProcessingMessage.java` lightweight message payload record.
+  - Created `DocumentQueuePublisher.java` (`@ConditionalOnProperty(mode=queue)`) to publish tasks to RabbitMQ.
+  - Created `DocumentProcessingConsumer.java` (`@RabbitListener`) to consume tasks, load entities from DB, and execute the synchronous processing pipeline with error handling.
+- Service Refactoring & Integration:
+  - Refactored `DocumentProcessingService.java` to extract synchronous `processDocument()` worker method while preserving `@Async` `processDocumentAsync()`.
+  - Modified `DocumentService.java` (`uploadDocument`, `uploadDocuments`, `reprocessDocument`) to conditionally dispatch to RabbitMQ when publisher is present, falling back to `@Async` thread pool otherwise.
+  - Modified `DocumentReconciliationScheduler.java` to conditionally re-enqueue stuck documents via queue or `@Async`.
+- Tests & Validation:
+  - Created `DocumentProcessingConsumerTest.java` (testing normal consumption, missing document handling, and exception isolation).
+  - Created `DocumentQueuePublisherTest.java` (testing exchange, routing key, and message payload).
+  - Updated `DocumentServiceTest.java` (testing both async and queue-publisher dispatch branches).
+  - Updated `WorkspaceIsolationTest.java` for new `DocumentService` constructor.
+  - Executed `mvn test` — **33 tests passed, 0 failures** (5 new tests added, 100% green).
+  - Executed `npm run build` — **Vite client bundle built cleanly in 694ms, 0 errors**.
+- Docs Updated:
+  - `rules.md` — added Spring AMQP / RabbitMQ to approved libraries list for Phase 12.3 stretch.
+  - `architecture.md` — updated §3.4 to document dual-mode processing and §8.1 for RabbitMQ docker compose service.
+  - `memory.md` & `task.md` — updated status, completed list, key decisions, and session log.
+- Files touched:
+  - Created: `RabbitMqConfig.java`, `DocumentProcessingMessage.java`, `DocumentQueuePublisher.java`, `DocumentProcessingConsumer.java`, `DocumentProcessingConsumerTest.java`, `DocumentQueuePublisherTest.java`.
+  - Modified: `pom.xml`, `application.yml`, `docker-compose.yml`, `.env.example`, `DocumentProcessingService.java`, `DocumentService.java`, `DocumentReconciliationScheduler.java`, `DocumentServiceTest.java`, `WorkspaceIsolationTest.java`, `rules.md`, `architecture.md`, `memory.md`.
+- Tested/confirmed: `mvn test` (33 tests pass, 0 failures), `npm run build` (clean Vite build, 0 errors).
+- Next session should: Proceed to Phase 12.4 (Multi-Document Comparative Anomaly Detection) or Phase 12.5 (4th Document Type - KYC Form).
+

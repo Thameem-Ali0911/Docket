@@ -71,7 +71,8 @@ class WorkspaceIsolationTest {
                 extractionRepository,
                 summaryRepository,
                 exportService,
-                llmBudgetService
+                llmBudgetService,
+                Optional.empty()
         );
 
         workspaceA = new Workspace("Workspace Alpha");
