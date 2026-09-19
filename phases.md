@@ -224,11 +224,11 @@
 
 ## Phase 12 (Stretch — only if ahead of schedule)
 
-- Batch upload (multiple files at once)
-- Confidence scores on extracted fields
-- Background job queue (Spring Kafka or RabbitMQ + Spring AMQP)
-- 4th document type (KYC form)
-- Billing simulation (Stripe test mode)
-- Multi-document comparative anomaly detection (trend-based, not just template-diff)
+- [x] Phase 12.1: Batch upload (multiple files at once via drag-and-drop batch queue & `POST /api/documents/batch`)
+- [x] Phase 12.2: Confidence scores on extracted fields (Gemini schema `fieldConfidences` + visual score pills)
+- [x] Phase 12.3: Background job queue (RabbitMQ + Spring AMQP with dual-mode `@Async` fallback)
+- [x] Phase 12.4: Multi-document comparative anomaly detection (duplicate invoices, price surge spikes >50%, payment term drift, and workspace vendor trends)
+- [ ] Phase 12.5: 4th document type (KYC form)
+- [ ] Phase 12.6: Billing simulation (Stripe test mode)
 
-**Note:** Do not start Phase 12 items until Phases 0–11 are fully complete and demo-stable.
+**Note:** Phases 0–11 and 12.1–12.4 are fully implemented, verified, and test-covered (38 passing automated tests).

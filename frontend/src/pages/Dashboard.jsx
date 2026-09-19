@@ -3,7 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import {
     FileText, CheckCircle2, AlertTriangle, Clock, XCircle,
-    Download, Upload, SlidersHorizontal, Search, X, LayoutDashboard, LogOut
+    Download, Upload, SlidersHorizontal, Search, X, LayoutDashboard, LogOut,
+    TrendingUp, TrendingDown, Building2, Copy, DollarSign, Layers, ArrowUpRight, ShieldAlert
 } from 'lucide-react';
 import { apiFetch, clearToken, downloadExport } from '../lib/api';
 import AmbientAurora from '../components/ui/AmbientAurora';
@@ -24,6 +25,10 @@ export default function Dashboard() {
     const [statusFilter, setStatusFilter] = useState('ALL');
     const [dateFilter, setDateFilter] = useState('ALL');
     const [llmUsage, setLlmUsage] = useState(null); // today's LLM call count
+    const [trends, setTrends] = useState(null);
+    const [activeTab, setActiveTab] = useState('documents'); // 'documents' | 'trends'
+    const [vendorSearch, setVendorSearch] = useState('');
+    const [vendorFilterAnomaliesOnly, setVendorFilterAnomaliesOnly] = useState(false);
 
     useEffect(() => { loadDashboard(); }, [navigate]);
 
@@ -34,11 +39,13 @@ export default function Dashboard() {
             apiFetch('/api/auth/me'),
             apiFetch('/api/documents'),
             apiFetch('/api/documents/usage').catch(() => ({ todayLlmUsage: null })),
+            apiFetch('/api/documents/trends').catch(() => null),
         ])
-            .then(([userData, docsData, usageData]) => {
+            .then(([userData, docsData, usageData, trendsData]) => {
                 setUser(userData);
                 setDocuments(docsData);
                 if (usageData?.todayLlmUsage !== undefined) setLlmUsage(usageData.todayLlmUsage);
+                if (trendsData) setTrends(trendsData);
             })
             .catch((err) => {
                 if (err.status === 401) { clearToken(); navigate('/login', { replace: true }); return; }
@@ -90,6 +97,18 @@ export default function Dashboard() {
             return true;
         });
     }, [documents, searchQuery, typeFilter, statusFilter, dateFilter]);
+
+    const filteredVendors = useMemo(() => {
+        if (!trends || !trends.vendors) return [];
+        return trends.vendors.filter(v => {
+            if (vendorFilterAnomaliesOnly && v.anomalyCount === 0) return false;
+            if (vendorSearch.trim()) {
+                const q = vendorSearch.toLowerCase();
+                return v.vendorName.toLowerCase().includes(q);
+            }
+            return true;
+        });
+    }, [trends, vendorSearch, vendorFilterAnomaliesOnly]);
 
     const stats = useMemo(() => ({
         total: documents.length,
@@ -288,6 +307,52 @@ export default function Dashboard() {
                     </motion.div>
                 )}
 
+                {/* ── View Switcher Tabs ── */}
+                <div className="flex items-center gap-2 mb-4 p-1 rounded-xl w-fit" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}>
+                    <button
+                        onClick={() => setActiveTab('documents')}
+                        className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-2 transition-all ${
+                            activeTab === 'documents' ? 'text-white' : 'text-slate-400 hover:text-white'
+                        }`}
+                        style={activeTab === 'documents' ? {
+                            background: 'linear-gradient(135deg, rgba(124,92,252,0.3), rgba(34,211,238,0.15))',
+                            border: '1px solid rgba(124,92,252,0.4)',
+                            boxShadow: 'var(--neo-shadow-sm)',
+                        } : {}}
+                    >
+                        <FileText size={13} style={{ color: 'var(--color-aurora-start)' }} />
+                        Documents ({documents.length})
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('trends')}
+                        className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-2 transition-all ${
+                            activeTab === 'trends' ? 'text-white' : 'text-slate-400 hover:text-white'
+                        }`}
+                        style={activeTab === 'trends' ? {
+                            background: 'linear-gradient(135deg, rgba(34,211,238,0.25), rgba(124,92,252,0.2))',
+                            border: '1px solid rgba(34,211,238,0.4)',
+                            boxShadow: 'var(--neo-shadow-sm)',
+                        } : {}}
+                    >
+                        <TrendingUp size={13} style={{ color: 'var(--color-aurora-end)' }} />
+                        Vendor Trends & Cross-Doc Intelligence
+                        {trends && trends.totalComparativeAnomalies > 0 && (
+                            <span
+                                className="px-1.5 py-0.5 rounded-full text-[10px] font-bold"
+                                style={{
+                                    background: 'rgba(245, 165, 36, 0.2)',
+                                    color: '#F5A524',
+                                    border: '1px solid rgba(245, 165, 36, 0.4)',
+                                }}
+                            >
+                                {trends.totalComparativeAnomalies} alert{trends.totalComparativeAnomalies > 1 ? 's' : ''}
+                            </span>
+                        )}
+                    </button>
+                </div>
+
+                {activeTab === 'documents' ? (
+                <>
                 {/* ── Filter + Export bar ── */}
                 <motion.div
                     initial={{ opacity: 0 }}
@@ -557,6 +622,181 @@ export default function Dashboard() {
                             )}
                         </div>
                     </div>
+                )}
+                </>
+                ) : (
+                /* ── Vendor Trends View ── */
+                <div className="space-y-4">
+                    {/* Top Trends Metrics */}
+                    <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+                        <div className="card-neo-sm p-4" style={{ background: 'var(--color-surface)' }}>
+                            <div className="flex items-center justify-between mb-2">
+                                <span className="text-[10px] font-bold uppercase tracking-wider text-purple-400">Tracked Vendors</span>
+                                <Building2 size={14} className="text-purple-400" />
+                            </div>
+                            <p className="text-2xl font-bold text-white">{trends?.totalVendors || 0}</p>
+                        </div>
+                        <div className="card-neo-sm p-4" style={{ background: 'var(--color-surface)' }}>
+                            <div className="flex items-center justify-between mb-2">
+                                <span className="text-[10px] font-bold uppercase tracking-wider text-cyan-400">Invoices Analyzed</span>
+                                <FileText size={14} className="text-cyan-400" />
+                            </div>
+                            <p className="text-2xl font-bold text-white">{trends?.totalInvoicesAnalyzed || 0}</p>
+                        </div>
+                        <div className="card-neo-sm p-4" style={{ background: 'var(--color-surface)' }}>
+                            <div className="flex items-center justify-between mb-2">
+                                <span className="text-[10px] font-bold uppercase tracking-wider text-amber-400">Price Surges (&gt;50%)</span>
+                                <TrendingUp size={14} className="text-amber-400" />
+                            </div>
+                            <p className="text-2xl font-bold text-amber-400">{trends?.priceSurgesCount || 0}</p>
+                        </div>
+                        <div className="card-neo-sm p-4" style={{ background: 'var(--color-surface)' }}>
+                            <div className="flex items-center justify-between mb-2">
+                                <span className="text-[10px] font-bold uppercase tracking-wider text-rose-400">Duplicate Invoices</span>
+                                <Copy size={14} className="text-rose-400" />
+                            </div>
+                            <p className="text-2xl font-bold text-rose-400">{trends?.duplicateInvoicesCount || 0}</p>
+                        </div>
+                        <div className="card-neo-sm p-4" style={{ background: 'var(--color-surface)' }}>
+                            <div className="flex items-center justify-between mb-2">
+                                <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-400">Total Comparative Alerts</span>
+                                <ShieldAlert size={14} className="text-emerald-400" />
+                            </div>
+                            <p className="text-2xl font-bold text-white">{trends?.totalComparativeAnomalies || 0}</p>
+                        </div>
+                    </div>
+
+                    {/* Filter / Search Bar */}
+                    <div className="card px-4 py-3 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3" style={{ background: 'var(--color-surface)' }}>
+                        <div className="relative flex-1 max-w-md">
+                            <input
+                                type="text"
+                                placeholder="Filter vendors by name..."
+                                value={vendorSearch}
+                                onChange={(e) => setVendorSearch(e.target.value)}
+                                className="input w-full"
+                                style={{ paddingLeft: 34, paddingTop: 7, paddingBottom: 7, fontSize: 13 }}
+                            />
+                            <Search size={13} style={{ position: 'absolute', left: 11, top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-disabled)' }} />
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <button
+                                onClick={() => setVendorFilterAnomaliesOnly(false)}
+                                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                                    !vendorFilterAnomaliesOnly ? 'bg-purple-600/30 text-white border border-purple-500/40' : 'text-slate-400 hover:text-white'
+                                }`}
+                            >
+                                All ({trends?.vendors?.length || 0})
+                            </button>
+                            <button
+                                onClick={() => setVendorFilterAnomaliesOnly(true)}
+                                className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all ${
+                                    vendorFilterAnomaliesOnly ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40' : 'text-slate-400 hover:text-white'
+                                }`}
+                            >
+                                <AlertTriangle size={12} className="text-amber-400" />
+                                Flagged Only ({trends?.vendors?.filter(v => v.anomalyCount > 0).length || 0})
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* Vendor Trends Table */}
+                    {filteredVendors.length === 0 ? (
+                        <div className="card p-12 text-center" style={{ background: 'var(--color-surface)' }}>
+                            <Building2 size={36} className="mx-auto mb-3 opacity-30 text-slate-400" />
+                            <h3 className="text-base font-bold text-white mb-1">No vendor intelligence found</h3>
+                            <p className="text-xs text-slate-400 max-w-sm mx-auto">
+                                Processed invoice extractions will automatically populate vendor trends, spend curves, and cross-document anomaly detection.
+                            </p>
+                        </div>
+                    ) : (
+                        <div className="card overflow-hidden" style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)' }}>
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-left" style={{ borderCollapse: 'collapse' }}>
+                                    <thead>
+                                        <tr style={{ background: 'rgba(255,255,255,0.02)', borderBottom: '1px solid var(--color-border)', fontSize: 11, color: 'var(--color-text-disabled)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                                            <th className="p-3.5">Vendor</th>
+                                            <th className="p-3.5">Invoices</th>
+                                            <th className="p-3.5">Total Spend</th>
+                                            <th className="p-3.5">Avg Ticket</th>
+                                            <th className="p-3.5">Price Range</th>
+                                            <th className="p-3.5">Latest Invoice</th>
+                                            <th className="p-3.5">Price Trend</th>
+                                            <th className="p-3.5">Anomalies</th>
+                                            <th className="p-3.5 text-right">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {filteredVendors.map((v) => {
+                                            const hasSpike = v.trendPercentage && v.trendPercentage >= 50;
+                                            const hasDrop = v.trendPercentage && v.trendPercentage <= -40;
+                                            return (
+                                                <tr
+                                                    key={v.vendorName}
+                                                    style={{ borderBottom: '1px solid var(--color-border)', transition: 'background 0.15s' }}
+                                                    className="hover:bg-white/[0.02]"
+                                                >
+                                                    <td className="p-3.5 font-medium text-white flex items-center gap-2">
+                                                        <Building2 size={14} className="text-purple-400 shrink-0" />
+                                                        <span>{v.vendorName}</span>
+                                                    </td>
+                                                    <td className="p-3.5 text-xs text-slate-300">{v.documentCount}</td>
+                                                    <td className="p-3.5 text-xs font-semibold text-white">${v.totalSpend.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                                                    <td className="p-3.5 text-xs text-slate-300">${v.averageAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                                                    <td className="p-3.5 text-xs text-slate-400">${v.minAmount.toFixed(0)} – ${v.maxAmount.toFixed(0)}</td>
+                                                    <td className="p-3.5 text-xs text-slate-300">
+                                                        {v.latestAmount ? `$${v.latestAmount.toFixed(2)}` : '—'}
+                                                        {v.latestInvoiceDate && <span className="block text-[10px] text-slate-500">{v.latestInvoiceDate}</span>}
+                                                    </td>
+                                                    <td className="p-3.5 text-xs">
+                                                        {v.trendPercentage === null ? (
+                                                            <span className="text-[11px] text-slate-500">Baseline (1 inv)</span>
+                                                        ) : hasSpike ? (
+                                                            <span className="px-2 py-0.5 rounded text-[11px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40 flex items-center gap-1 w-fit">
+                                                                <TrendingUp size={11} /> +{v.trendPercentage}% Surge
+                                                            </span>
+                                                        ) : hasDrop ? (
+                                                            <span className="px-2 py-0.5 rounded text-[11px] font-bold bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 flex items-center gap-1 w-fit">
+                                                                <TrendingDown size={11} /> {v.trendPercentage}% Drop
+                                                            </span>
+                                                        ) : (
+                                                            <span className="text-[11px] text-slate-300">
+                                                                {v.trendPercentage > 0 ? `+${v.trendPercentage}%` : `${v.trendPercentage}%`}
+                                                            </span>
+                                                        )}
+                                                    </td>
+                                                    <td className="p-3.5 text-xs">
+                                                        {v.anomalyCount > 0 ? (
+                                                            <span className="px-2 py-0.5 rounded text-[11px] font-bold bg-rose-500/20 text-rose-300 border border-rose-500/40 flex items-center gap-1 w-fit">
+                                                                <AlertTriangle size={11} /> {v.anomalyCount} flag{v.anomalyCount > 1 ? 's' : ''}
+                                                            </span>
+                                                        ) : (
+                                                            <span className="text-emerald-400 text-[11px] font-medium flex items-center gap-1">
+                                                                <CheckCircle2 size={11} /> Healthy
+                                                            </span>
+                                                        )}
+                                                    </td>
+                                                    <td className="p-3.5 text-right text-xs">
+                                                        <button
+                                                            onClick={() => {
+                                                                setSearchQuery(v.vendorName);
+                                                                setTypeFilter('INVOICE');
+                                                                setActiveTab('documents');
+                                                            }}
+                                                            className="text-cyan-400 hover:text-cyan-300 font-semibold flex items-center gap-1 ml-auto"
+                                                        >
+                                                            Filter Invoices <ArrowUpRight size={12} />
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    )}
+                </div>
                 )}
             </main>
         </div>

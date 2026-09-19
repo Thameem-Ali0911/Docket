@@ -20,6 +20,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import com.docket.dto.document.DocumentExportDto;
 import com.docket.dto.document.DocumentListItemDto;
+import com.docket.dto.document.WorkspaceTrendsDto;
 import com.docket.dto.extraction.ExtractionCorrectionRequest;
 import com.docket.entity.AnomalyFlag;
 import com.docket.entity.Document;
@@ -53,6 +54,7 @@ public class DocumentService {
     private final SummaryRepository summaryRepository;
     private final ExportService exportService;
     private final LlmBudgetService llmBudgetService;
+    private final ComparativeAnomalyService comparativeAnomalyService;
     private final Optional<DocumentQueuePublisher> queuePublisher;
 
     public DocumentService(DocumentRepository documentRepository,
@@ -64,6 +66,7 @@ public class DocumentService {
                            SummaryRepository summaryRepository,
                            ExportService exportService,
                            LlmBudgetService llmBudgetService,
+                           ComparativeAnomalyService comparativeAnomalyService,
                            Optional<DocumentQueuePublisher> queuePublisher) {
         this.documentRepository = documentRepository;
         this.userRepository = userRepository;
@@ -74,6 +77,7 @@ public class DocumentService {
         this.summaryRepository = summaryRepository;
         this.exportService = exportService;
         this.llmBudgetService = llmBudgetService;
+        this.comparativeAnomalyService = comparativeAnomalyService;
         this.queuePublisher = queuePublisher;
     }
 
@@ -365,5 +369,17 @@ public class DocumentService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "USER_NOT_FOUND", "User not found"));
         return llmBudgetService.getTodayUsage(user.getWorkspace().getId());
+    }
+
+    /**
+     * Retrieves workspace-level cross-document comparative trends and vendor intelligence.
+     *
+     * @param userId the authenticated user ID
+     * @return WorkspaceTrendsDto containing aggregated trends and anomaly stats
+     */
+    public WorkspaceTrendsDto getWorkspaceTrends(Integer userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "USER_NOT_FOUND", "User not found"));
+        return comparativeAnomalyService.calculateWorkspaceTrends(user.getWorkspace().getId());
     }
 }

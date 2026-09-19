@@ -26,11 +26,13 @@ public class DocumentProcessingService {
     private final ExtractionService extractionService;
     private final SummarizeService summarizeService;
     private final AnomalyService anomalyService;
+    private final ComparativeAnomalyService comparativeAnomalyService;
     private final LlmBudgetService llmBudgetService;
 
     public DocumentProcessingService(OcrService ocrService, StorageService storageService,
                                       DocumentRepository documentRepository, ExtractionService extractionService,
                                       SummarizeService summarizeService, AnomalyService anomalyService,
+                                      ComparativeAnomalyService comparativeAnomalyService,
                                       LlmBudgetService llmBudgetService) {
         this.ocrService = ocrService;
         this.storageService = storageService;
@@ -38,6 +40,7 @@ public class DocumentProcessingService {
         this.extractionService = extractionService;
         this.summarizeService = summarizeService;
         this.anomalyService = anomalyService;
+        this.comparativeAnomalyService = comparativeAnomalyService;
         this.llmBudgetService = llmBudgetService;
     }
 
@@ -146,6 +149,13 @@ public class DocumentProcessingService {
                     doc.getWorkspace().getId(), doc.getId());
             } catch (Throwable t) {
                 log.error("Anomaly checking failed for document id={}", doc.getId(), t);
+            }
+
+            // Run comparative & trend anomaly checks across workspace document history
+            try {
+                comparativeAnomalyService.detectComparativeAnomalies(doc);
+            } catch (Throwable t) {
+                log.error("Comparative anomaly checking failed for document id={}", doc.getId(), t);
             }
         }
     }

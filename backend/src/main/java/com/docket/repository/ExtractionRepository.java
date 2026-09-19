@@ -10,5 +10,6 @@ import com.docket.entity.Extraction;
 public interface ExtractionRepository extends JpaRepository<Extraction, Long> {
     Optional<Extraction> findByDocumentId(Integer documentId);
     List<Extraction> findByDocumentIdIn(List<Integer> documentIds);
+    List<Extraction> findByDocumentWorkspaceId(Integer workspaceId);
 }
 

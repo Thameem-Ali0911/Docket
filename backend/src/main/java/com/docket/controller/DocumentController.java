@@ -24,6 +24,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import com.docket.dto.document.DocumentExportDto;
 import com.docket.dto.document.DocumentListItemDto;
+import com.docket.dto.document.WorkspaceTrendsDto;
 import com.docket.dto.extraction.ExtractionCorrectionRequest;
 import com.docket.entity.AnomalyFlag;
 import com.docket.entity.Document;
@@ -302,5 +303,18 @@ public class DocumentController {
                 .contentType(mediaType)
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
                 .body(content.getBytes(StandardCharsets.UTF_8));
+    }
+
+    /**
+     * Retrieves workspace-level cross-document comparative trends and vendor intelligence.
+     *
+     * @param authentication the authenticated user's details
+     * @return WorkspaceTrendsDto
+     */
+    @GetMapping("/trends")
+    public ResponseEntity<WorkspaceTrendsDto> getWorkspaceTrends(Authentication authentication) {
+        Integer userId = (Integer) authentication.getPrincipal();
+        WorkspaceTrendsDto trends = documentService.getWorkspaceTrends(userId);
+        return ResponseEntity.ok(trends);
     }
 }

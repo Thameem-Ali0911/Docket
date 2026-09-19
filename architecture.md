@@ -102,6 +102,14 @@
 - All three are separate, single-purpose prompts — never one giant prompt trying to do everything at once (see rules.md)
 - LLM JSON responses are deserialized into dedicated **Java record/DTO classes** (one per document type) using **Jackson**, and validated with Bean Validation before being persisted — invalid output is rejected, never silently patched
 
+### 3.6.1 Anomaly Detection Architecture (Hybrid)
+- **Template Deviations (LLM-based):** `AnomalyService` compares newly extracted document text against the designated workspace `Template` using single-responsibility Gemini prompts (`AnomalyCheckPrompt`).
+- **Multi-Document Comparative & Trend Anomalies (Deterministic / Cross-Doc):** `ComparativeAnomalyService` executes cross-document analysis across workspace document history:
+  - **Duplicate Invoice Detection:** Flags identical invoice numbers across documents in the same workspace.
+  - **Price Surge & Trend Spikes:** Calculates vendor historical averages; flags invoices with >50% surge above baseline.
+  - **Payment Term Anomalies:** Validates payment windows (`dueDate` < `invoiceDate`) and identifies credit term contraction.
+  - **Workspace Vendor Intelligence:** `GET /api/documents/trends` aggregates vendor spend, invoice velocity, trend deltas, and risk alerts without consuming LLM budget tokens.
+
 ### 3.7 File Storage
 - Decoupled behind a `StorageService` interface with pluggable implementations:
   - **Local Disk (`LocalStorageServiceImpl`):** For local development (`/uploads`), served exclusively via authenticated, workspace-checked endpoints (`GET /api/documents/{id}/file`).

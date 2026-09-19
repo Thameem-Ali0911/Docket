@@ -419,7 +419,7 @@ export default function DocumentDetail() {
                                             <div className="mb-6">
                                                 <h4 className="text-xs font-bold uppercase tracking-wider text-amber-400 mb-2 flex items-center gap-1.5">
                                                     <AlertTriangle size={13} aria-hidden="true" />
-                                                    Detected Template Deviations ({anomalies.length})
+                                                    Detected Anomalies & Deviations ({anomalies.length})
                                                 </h4>
                                                 {anomalies.map(flag => (
                                                     <AnomalyFlag key={flag.id} flag={flag} />

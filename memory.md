@@ -18,7 +18,7 @@
 
 - **Active Phase:** Phase 12 — Stretch Goals & Enterprise Enhancements
 - **Last Updated:** 2026-09-19
-- **Overall Progress:** ~99% — Phases 0–11 complete, Phase 12.1 (Batch Upload), Phase 12.2 (Field-Level Confidence Scoring), and Phase 12.3 (Queue-Based Processing with RabbitMQ) complete. 33 passing automated tests, frontend builds cleanly.
+- **Overall Progress:** ~99.5% — Phases 0–11 complete; Phase 12.1 (Batch Upload), Phase 12.2 (Field-Level Confidence Scoring), Phase 12.3 (RabbitMQ Queue Processing), and Phase 12.4 (Multi-Document Comparative Anomaly Detection & Vendor Trends) complete. 38 passing automated tests (100% green), frontend builds cleanly.
 
 ## Completed
 
@@ -114,16 +114,25 @@
   - Updated `DocumentService.java` and `DocumentReconciliationScheduler.java` with conditional dispatch (`Optional<DocumentQueuePublisher>`).
   - Added unit tests in `DocumentProcessingConsumerTest.java`, `DocumentQueuePublisherTest.java`, and updated `DocumentServiceTest.java` and `WorkspaceIsolationTest.java` (total automated tests increased to 33, 100% passing).
   - Updated `rules.md` and `architecture.md` to formally document RabbitMQ + Spring AMQP dual-mode architecture.
+- [x] Phase 12.4: Multi-Document Comparative Anomaly Detection & Vendor Trends (Session 41):
+  - Created `ComparativeAnomalyService.java` providing deterministic cross-document analysis across workspace invoice history (duplicate invoice numbers, >50% price surges against historical vendor average, payment window contraction / invalid date order).
+  - Created `VendorTrendDto.java` and `WorkspaceTrendsDto.java` records.
+  - Added `GET /api/documents/trends` endpoint in `DocumentController.java` and `DocumentService.java` returning aggregated vendor metrics (spend, ticket size, range, trend %, active flags) without consuming daily LLM budget tokens.
+  - Wired comparative anomaly checks into `DocumentProcessingService.java` post-extraction pipeline.
+  - Enhanced `AnomalyFlag.jsx` with category tags (`DUPLICATE ALERT`, `TREND ANOMALY`, `TEMPLATE DEVIATION`).
+  - Updated `DocumentDetail.jsx` heading to "Detected Anomalies & Deviations".
+  - Overhauled `Dashboard.jsx` with a dual-view tab switcher ("Documents" vs "Vendor Trends & Cross-Doc Intelligence"), including summary metric cards, vendor search/filtering, and one-click invoice drill-down.
+  - Added unit tests in `ComparativeAnomalyServiceTest.java` and updated `DocumentServiceTest.java` and `WorkspaceIsolationTest.java` (total automated tests increased to 38, 100% green).
+  - Clean frontend production build (`npm run build` in 632ms, 0 errors).
 
 ## In Progress
 
-- Phase 12: Stretch Goals & Enterprise Enhancements — Phase 12.4 (Multi-Document Comparative Anomaly Detection), KYC form, billing simulation.
+- Phase 12: Stretch Goals & Enterprise Enhancements — Phase 12.5 (4th Document Type - KYC Form), Phase 12.6 (Billing Simulation).
 
 ## Next Steps (in order)
 
-1. **Phase 12.4 (Multi-Document Comparative Anomaly Detection):** Cross-document vendor trend anomalies and aggregate pattern analysis across invoices/contracts.
-2. **Phase 12.5 (4th Document Type - KYC Form):** Add KYC form type, validation rules, extraction prompt/DTO.
-3. **Phase 12.6 (Billing Simulation):** Mock subscription tiers / Stripe webhook simulator.
+1. **Phase 12.5 (4th Document Type - KYC Form):** Add KYC form type, validation rules, extraction prompt/DTO, and UI fields renderer.
+2. **Phase 12.6 (Billing Simulation):** Mock subscription tiers / Stripe webhook simulator.
 
 
 ## Key Decisions & Why
@@ -139,6 +148,7 @@
 | Switched LLM provider from Anthropic (Claude) to Google Gemini | User has a Gemini API key, not an Anthropic one; no LLM code was written yet (Phase 4 not started), so this was a docs/config-only rename with no migration cost | architecture.md §3.6, prd.md, rules.md §2, phases.md Phase 4 — see Session 6 |
 | Phase Plan Expansion (Phases 9 & 10 inserted; Deployment & Stretch moved to 11 & 12) | Rigorous architectural evaluation (`Docket_Evaluation_Report.md`) identified production gaps (unauthenticated file access, zero tests, triplicated code, lack of pagination, missing DB index); formal phases inserted to remediate all gaps to senior SWE bar | phases.md Phase 9 & 10, memory.md — Session 33 |
 | Dual-mode queue & async processing (Phase 12.3) | Allows running without RabbitMQ in lightweight local-dev while enabling durable, horizontally scalable queue processing in Docker/production via `docket.processing.mode` | architecture.md §3.4, rules.md §2, RabbitMqConfig.java |
+| Deterministic Comparative Anomaly Detection (Phase 12.4) | Evaluates duplicates, price surges, and term contractions mathematically over Postgres extraction history — fast, zero-token cost, avoids consuming LLM rate limits | architecture.md §3.6.1, ComparativeAnomalyService.java |
 
 ## Known Issues / Gotchas
 
@@ -642,4 +652,32 @@ pm run build).
   - Modified: `pom.xml`, `application.yml`, `docker-compose.yml`, `.env.example`, `DocumentProcessingService.java`, `DocumentService.java`, `DocumentReconciliationScheduler.java`, `DocumentServiceTest.java`, `WorkspaceIsolationTest.java`, `rules.md`, `architecture.md`, `memory.md`.
 - Tested/confirmed: `mvn test` (33 tests pass, 0 failures), `npm run build` (clean Vite build, 0 errors).
 - Next session should: Proceed to Phase 12.4 (Multi-Document Comparative Anomaly Detection) or Phase 12.5 (4th Document Type - KYC Form).
+
+### Session 41 — 2026-09-19
+- Implemented Phase 12.4: Multi-Document Comparative Anomaly Detection & Workspace Vendor Trends.
+- Backend Engine:
+  - Created `ComparativeAnomalyService.java`: performs deterministic comparative analysis across workspace document extraction histories.
+    - Duplicate detection: identifies identical `invoiceNumber` across different documents in the same workspace (flags `HIGH` severity).
+    - Price surge detection: computes historical vendor spend average across prior invoices; flags invoices with >50% price surge (`MEDIUM` / `HIGH` severity).
+    - Payment term anomalies: flags invalid date orders (`dueDate` < `invoiceDate`) and abrupt payment window contractions.
+    - Workspace vendor trends: aggregates invoices by vendor into spend curves, average tickets, price ranges, latest invoice, trend percentage, and active anomaly counts.
+  - Created `VendorTrendDto.java` and `WorkspaceTrendsDto.java` records.
+  - Added query method `findByDocumentWorkspaceId` to `ExtractionRepository.java`.
+  - Wired `comparativeAnomalyService.detectComparativeAnomalies(doc)` into `DocumentProcessingService.java` post-extraction pipeline step.
+  - Injected `ComparativeAnomalyService` into `DocumentService.java` and added `GET /api/documents/trends` endpoint to `DocumentController.java` (workspace-isolated).
+- Frontend UI:
+  - Updated `AnomalyFlag.jsx` to render source-specific category badges (`DUPLICATE ALERT`, `TREND ANOMALY`, `TEMPLATE DEVIATION`).
+  - Updated `DocumentDetail.jsx` heading to "Detected Anomalies & Deviations".
+  - Overhauled `Dashboard.jsx` with a dual-view tab switcher ("Documents" vs "Vendor Trends & Cross-Doc Intelligence"). Added summary cards (Tracked Vendors, Invoices Analyzed, Price Surges, Duplicates, Total Alerts), vendor search, "Flagged Only" filter, comprehensive metrics table, and one-click "Filter Invoices" drill-down.
+- Tests & Validation:
+  - Created `ComparativeAnomalyServiceTest.java` (5 unit tests: duplicate invoice detection, price surge detection, normal invoice within bounds, payment term window check, workspace trends calculation).
+  - Updated `DocumentServiceTest.java` (added `testGetWorkspaceTrends`) and `WorkspaceIsolationTest.java`.
+  - Executed `mvn test` — **38 tests passed, 0 failures, 100% green**.
+  - Executed `npm run build` — **Vite client bundle built cleanly in 632ms, 0 errors**.
+- Docs Updated: `phases.md`, `architecture.md`, `memory.md`, `task.md`.
+- Files touched:
+  - Created: `VendorTrendDto.java`, `WorkspaceTrendsDto.java`, `ComparativeAnomalyService.java`, `ComparativeAnomalyServiceTest.java`.
+  - Modified: `ExtractionRepository.java`, `DocumentProcessingService.java`, `DocumentService.java`, `DocumentController.java`, `DocumentServiceTest.java`, `WorkspaceIsolationTest.java`, `AnomalyFlag.jsx`, `DocumentDetail.jsx`, `Dashboard.jsx`, `phases.md`, `architecture.md`, `memory.md`, `task.md`.
+- Next session should: Proceed to Phase 12.5 (4th Document Type - KYC Form) or Phase 12.6 (Billing Simulation).
+
 

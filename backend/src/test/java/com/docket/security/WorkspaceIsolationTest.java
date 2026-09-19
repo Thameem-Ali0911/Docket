@@ -22,6 +22,7 @@ import com.docket.repository.DocumentRepository;
 import com.docket.repository.ExtractionRepository;
 import com.docket.repository.SummaryRepository;
 import com.docket.repository.UserRepository;
+import com.docket.service.ComparativeAnomalyService;
 import com.docket.service.DocumentProcessingService;
 import com.docket.service.DocumentService;
 import com.docket.service.ExportService;
@@ -52,6 +53,8 @@ class WorkspaceIsolationTest {
     private ExportService exportService;
     @Mock
     private LlmBudgetService llmBudgetService;
+    @Mock
+    private ComparativeAnomalyService comparativeAnomalyService;
 
     private DocumentService documentService;
 
@@ -72,6 +75,7 @@ class WorkspaceIsolationTest {
                 summaryRepository,
                 exportService,
                 llmBudgetService,
+                comparativeAnomalyService,
                 Optional.empty()
         );
 

@@ -50,6 +50,8 @@ class DocumentServiceTest {
     private ExportService exportService;
     @Mock
     private LlmBudgetService llmBudgetService;
+    @Mock
+    private ComparativeAnomalyService comparativeAnomalyService;
 
     private DocumentService documentService;
 
@@ -68,6 +70,7 @@ class DocumentServiceTest {
                 summaryRepository,
                 exportService,
                 llmBudgetService,
+                comparativeAnomalyService,
                 Optional.empty()
         );
 
@@ -185,6 +188,7 @@ class DocumentServiceTest {
                 summaryRepository,
                 exportService,
                 llmBudgetService,
+                comparativeAnomalyService,
                 Optional.of(publisher)
         );
 
@@ -201,5 +205,21 @@ class DocumentServiceTest {
         assertNotNull(result);
         verify(publisher).publish(savedDoc);
         verify(documentProcessingService, never()).processDocumentAsync(any());
+    }
+
+    @Test
+    @DisplayName("getWorkspaceTrends delegates to comparativeAnomalyService with user's workspace ID")
+    void testGetWorkspaceTrends() {
+        when(userRepository.findById(10)).thenReturn(Optional.of(user));
+        com.docket.dto.document.WorkspaceTrendsDto mockTrends = new com.docket.dto.document.WorkspaceTrendsDto(
+                1, 2, 0, 0, 0, List.of()
+        );
+        when(comparativeAnomalyService.calculateWorkspaceTrends(1)).thenReturn(mockTrends);
+
+        var result = documentService.getWorkspaceTrends(10);
+
+        assertNotNull(result);
+        assertEquals(1, result.totalVendors());
+        verify(comparativeAnomalyService).calculateWorkspaceTrends(1);
     }
 }
