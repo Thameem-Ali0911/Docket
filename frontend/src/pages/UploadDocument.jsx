@@ -123,6 +123,7 @@ export default function UploadDocument() {
         { value: 'INVOICE', label: '🧾 Invoice', desc: 'Bills, receipts, purchase orders' },
         { value: 'CONTRACT', label: '📄 Contract', desc: 'Agreements, SOWs, NDAs' },
         { value: 'RESUME', label: '👤 Resume', desc: 'CVs and professional profiles' },
+        { value: 'KYC_FORM', label: '🪪 KYC Form', desc: 'ID cards, passports, verification forms' },
     ];
 
     return (

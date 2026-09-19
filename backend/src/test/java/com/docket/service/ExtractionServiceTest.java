@@ -177,4 +177,54 @@ class ExtractionServiceTest {
         assertTrue(saved.getFieldsJson().contains("fieldConfidences"));
         assertTrue(saved.getFieldsJson().contains("0.98"));
     }
+
+    @Test
+    @DisplayName("Valid Gemini extraction for KYC_FORM saves extraction JSON with fieldConfidences")
+    void testExtractKycFieldsSuccess() throws Exception {
+        Workspace workspace = new Workspace("KYC Workspace");
+        Document kycDoc = new Document(workspace, DocumentType.KYC_FORM, "/uploads/passport.pdf", DocumentStatus.PROCESSED);
+        kycDoc.setExtractedText("PASSPORT\\nName: Jane Doe\\nID No: P12345678\\nDOB: 1990-05-15\\nCountry: USA");
+        setEntityId(kycDoc, 202);
+
+        String kycJson = """
+                {
+                    "fullName": "Jane Doe",
+                    "idType": "Passport",
+                    "idNumber": "P12345678",
+                    "dateOfBirth": "1990-05-15",
+                    "nationality": "United States",
+                    "issueDate": "2020-01-10",
+                    "expiryDate": "2030-01-09",
+                    "address": "742 Evergreen Terrace, Springfield, OR",
+                    "verificationStatus": "VALID",
+                    "fieldConfidences": {
+                        "fullName": 0.99,
+                        "idType": 0.97,
+                        "idNumber": 0.96,
+                        "dateOfBirth": 0.95,
+                        "nationality": 0.94,
+                        "issueDate": 0.91,
+                        "expiryDate": 0.93,
+                        "address": 0.88,
+                        "verificationStatus": 0.92
+                    }
+                }
+                """;
+
+        when(geminiClient.generateStructuredJson(anyString(), anyString())).thenReturn(kycJson);
+        when(extractionRepository.findByDocumentId(202)).thenReturn(Optional.empty());
+
+        extractionService.extractDocumentFields(kycDoc);
+
+        ArgumentCaptor<Extraction> captor = ArgumentCaptor.forClass(Extraction.class);
+        verify(extractionRepository).save(captor.capture());
+
+        Extraction saved = captor.getValue();
+        assertNotNull(saved);
+        assertNull(saved.getFailedReason());
+        assertTrue(saved.getFieldsJson().contains("Jane Doe"));
+        assertTrue(saved.getFieldsJson().contains("P12345678"));
+        assertTrue(saved.getFieldsJson().contains("fieldConfidences"));
+        assertTrue(saved.getFieldsJson().contains("0.99"));
+    }
 }

@@ -44,7 +44,7 @@
 ## 2. App Flow
 
 1. **Sign up / Login** → user creates a workspace (or joins one)
-2. **Upload document** → user selects doc type (Contract/Invoice/Resume) and uploads a file
+2. **Upload document** → user selects doc type (Contract/Invoice/Resume/KYC Form) and uploads a file
 3. File is stored in object storage; a `documents` row is created with status `pending`
 4. Backend enqueues a processing job (see 3.4 for queue choice)
 5. **Processing worker**:
@@ -197,9 +197,10 @@ docket/
 │   │   │   │   │   ├── auth/
 │   │   │   │   │   ├── document/                  # DocumentListItemDto, DocumentExportDto
 │   │   │   │   │   ├── extraction/                # ExtractionCorrectionRequest
-│   │   │   │   │   ├── InvoiceExtractionDto.java
-│   │   │   │   │   ├── ContractExtractionDto.java
-│   │   │   │   │   └── ResumeExtractionDto.java
+					├── InvoiceExtractionDto.java
+					├── ContractExtractionDto.java
+					├── ResumeExtractionDto.java
+					└── KycExtractionDto.java
 │   │   │   │   ├── service/
 │   │   │   │   │   ├── OcrService.java
 │   │   │   │   │   ├── ExtractionService.java        # Generic type-dispatched Gemini engine
@@ -211,11 +212,12 @@ docket/
 │   │   │   │   │   ├── DocumentReconciliationScheduler.java # Auto-reprocess stuck PENDING docs
 │   │   │   │   │   └── GeminiClient.java             # Exponential backoff retry loop
 │   │   │   │   ├── prompt/
-│   │   │   │   │   ├── ExtractInvoicePrompt.java
-│   │   │   │   │   ├── ExtractContractPrompt.java
-│   │   │   │   │   ├── ExtractResumePrompt.java
-│   │   │   │   │   ├── SummarizePrompt.java
-│   │   │   │   │   └── AnomalyCheckPrompt.java
+					├── ExtractInvoicePrompt.java
+					├── ExtractContractPrompt.java
+					├── ExtractResumePrompt.java
+					├── ExtractKycPrompt.java
+					├── SummarizePrompt.java
+					└── AnomalyCheckPrompt.java
 │   │   │   │   ├── security/
 │   │   │   │   │   ├── JwtService.java
 │   │   │   │   │   ├── JwtAuthFilter.java
@@ -237,7 +239,7 @@ docket/
 
 - **users** (id, email, password_hash, workspace_id, created_at)
 - **workspaces** (id, name, created_at)
-- **documents** (id, workspace_id, type [contract/invoice/resume], file_url, status, uploaded_at)
+- **documents** (id, workspace_id, type [CONTRACT/INVOICE/RESUME/KYC_FORM], file_url, status, uploaded_at)
 - **extractions** (id, document_id, field_key, field_value, confidence)
 - **summaries** (id, document_id, summary_text)
 - **templates** (id, workspace_id, type, document_id — points to which document is the "standard")

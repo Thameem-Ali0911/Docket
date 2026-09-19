@@ -569,6 +569,7 @@ function ExtractionFields({ type, fields }) {
     if (type === 'INVOICE')  return <InvoiceFields fields={fields} />;
     if (type === 'CONTRACT') return <ContractFields fields={fields} />;
     if (type === 'RESUME')   return <ResumeFields fields={fields} />;
+    if (type === 'KYC_FORM') return <KycFields fields={fields} />;
     return <pre className="text-xs p-3 rounded bg-black/40 text-gray-300" style={{ overflowX: 'auto' }}>{JSON.stringify(fields, null, 2)}</pre>;
 }
 
@@ -712,6 +713,49 @@ function ResumeFields({ fields }) {
                             </tbody>
                         </table>
                     </div>
+                </div>
+            )}
+        </>
+    );
+}
+
+function KycFields({ fields }) {
+    const conf = fields.fieldConfidences || {};
+    const statusColor = (s) => {
+        if (!s) return 'var(--color-text-disabled)';
+        const u = s.toUpperCase();
+        if (u === 'VALID' || u === 'VERIFIED') return '#34d399';
+        if (u === 'EXPIRED') return '#f87171';
+        return '#fbbf24';
+    };
+    return (
+        <>
+            <dl className="grid gap-3 mb-6 grid-cols-2">
+                <div className="col-span-2">
+                    <Field label="Full Name" value={fields.fullName} confidence={conf.fullName} bold />
+                </div>
+                <Field label="ID Type"       value={fields.idType}      confidence={conf.idType} />
+                <Field label="ID Number"     value={fields.idNumber}    confidence={conf.idNumber} />
+                <Field label="Date of Birth" value={fields.dateOfBirth} confidence={conf.dateOfBirth} />
+                <Field label="Nationality"   value={fields.nationality} confidence={conf.nationality} />
+                <Field label="Issue Date"    value={fields.issueDate}   confidence={conf.issueDate} />
+                <Field label="Expiry Date"   value={fields.expiryDate}  confidence={conf.expiryDate} />
+                <div className="col-span-2">
+                    <Field label="Address" value={fields.address} confidence={conf.address} />
+                </div>
+            </dl>
+
+            {fields.verificationStatus && (
+                <div className="flex items-center gap-3 px-4 py-3 rounded-lg border"
+                    style={{ background: 'var(--color-surface-raised)', borderColor: 'var(--color-border)' }}>
+                    <SectionHeader>Verification Status</SectionHeader>
+                    <span className="ml-auto font-bold text-sm uppercase tracking-wide"
+                        style={{ color: statusColor(fields.verificationStatus) }}>
+                        {fields.verificationStatus}
+                    </span>
+                    {typeof conf.verificationStatus === 'number' && (
+                        <ConfidenceBadge score={conf.verificationStatus} />
+                    )}
                 </div>
             )}
         </>

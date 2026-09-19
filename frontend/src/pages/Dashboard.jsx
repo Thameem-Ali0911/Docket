@@ -386,6 +386,7 @@ export default function Dashboard() {
                                 <option value="INVOICE">Invoices</option>
                                 <option value="CONTRACT">Contracts</option>
                                 <option value="RESUME">Resumes</option>
+                                <option value="KYC_FORM">KYC Forms</option>
                             </select>
 
                             <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}

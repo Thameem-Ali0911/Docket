@@ -9,6 +9,7 @@ const DOCUMENT_TYPES = [
     { type: 'INVOICE', label: 'Invoices', singular: 'Invoice', emoji: '🧾', description: 'Standard billing layout, vendor terms, tax structures, and line item formats.' },
     { type: 'CONTRACT', label: 'Contracts', singular: 'Contract', emoji: '📄', description: 'Standard legal terms, termination clauses, liability limitations, and governing law.' },
     { type: 'RESUME', label: 'Resumes', singular: 'Resume', emoji: '👤', description: 'Expected qualification standards, required skill profiles, and section structures.' },
+    { type: 'KYC_FORM', label: 'KYC Forms', singular: 'KYC Form', emoji: '🪪', description: 'Standard government ID structures, verification documents, and compliance records.' },
 ];
 
 /**

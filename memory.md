@@ -18,7 +18,7 @@
 
 - **Active Phase:** Phase 12 — Stretch Goals & Enterprise Enhancements
 - **Last Updated:** 2026-09-19
-- **Overall Progress:** ~99.5% — Phases 0–11 complete; Phase 12.1 (Batch Upload), Phase 12.2 (Field-Level Confidence Scoring), Phase 12.3 (RabbitMQ Queue Processing), and Phase 12.4 (Multi-Document Comparative Anomaly Detection & Vendor Trends) complete. 38 passing automated tests (100% green), frontend builds cleanly.
+- **Overall Progress:** ~99.7% — Phases 0–11 complete; Phase 12.1 (Batch Upload), Phase 12.2 (Field-Level Confidence Scoring), Phase 12.3 (RabbitMQ Queue Processing), Phase 12.4 (Multi-Document Comparative Anomaly Detection & Vendor Trends), and Phase 12.5 (4th Document Type — KYC Form) complete. 39 passing automated tests (100% green), frontend builds cleanly.
 
 ## Completed
 
@@ -124,15 +124,27 @@
   - Overhauled `Dashboard.jsx` with a dual-view tab switcher ("Documents" vs "Vendor Trends & Cross-Doc Intelligence"), including summary metric cards, vendor search/filtering, and one-click invoice drill-down.
   - Added unit tests in `ComparativeAnomalyServiceTest.java` and updated `DocumentServiceTest.java` and `WorkspaceIsolationTest.java` (total automated tests increased to 38, 100% green).
   - Clean frontend production build (`npm run build` in 632ms, 0 errors).
+- [x] Phase 12.5: 4th Document Type — KYC Form (Session 42):
+  - Added `KYC_FORM` to `DocumentType.java` enum (no schema migration needed — `type` column is `VARCHAR(50)`).
+  - Created `KycExtractionDto.java` with `@NotNull`-validated fields: `fullName`, `idType`, `idNumber`, `dateOfBirth`, `nationality`, `issueDate`, `expiryDate`, `address`, `verificationStatus`, and `fieldConfidences` map.
+  - Created `ExtractKycPrompt.java` with strict Gemini extraction instructions and full JSON schema enforcing all 9 fields plus per-field confidence scoring.
+  - Updated `ExtractionService.java`: added `extractKycFields()` method and `case KYC_FORM ->` branch in `extractDocumentFields()` dispatch switch.
+  - Added unit test `testExtractKycFieldsSuccess` to `ExtractionServiceTest.java` — exercises full `extractDocumentFields()` dispatch path for `KYC_FORM`, verifying correct JSON persistence and confidence scores.
+  - Updated `UploadDocument.jsx` typeOptions with "🢪 KYC Form" option.
+  - Updated `TemplateManager.jsx` `DOCUMENT_TYPES` with KYC Forms tab.
+  - Updated `Dashboard.jsx` typeFilter select with "KYC Forms" option.
+  - Updated `DocumentDetail.jsx` `ExtractionFields` dispatch and added `KycFields` renderer component with: 2-column identity grid (`fullName`, `idType`, `idNumber`, `dateOfBirth`, `nationality`, `issueDate`, `expiryDate`, `address`), all fields with per-field confidence badges, and a status bar with color-coded `verificationStatus` (green=VALID/VERIFIED, red=EXPIRED, amber=other).
+  - `mvn test` — **39 tests passed, 0 failures** (100% green).
+  - `npm run build` — **Vite client bundle built cleanly in 657ms, 0 errors** (443 kB JS / 28 kB CSS).
 
 ## In Progress
 
-- Phase 12: Stretch Goals & Enterprise Enhancements — Phase 12.5 (4th Document Type - KYC Form), Phase 12.6 (Billing Simulation).
+- Phase 12: Stretch Goals & Enterprise Enhancements — Phase 12.6 (Billing Simulation) is the remaining stretch goal.
 
 ## Next Steps (in order)
 
-1. **Phase 12.5 (4th Document Type - KYC Form):** Add KYC form type, validation rules, extraction prompt/DTO, and UI fields renderer.
-2. **Phase 12.6 (Billing Simulation):** Mock subscription tiers / Stripe webhook simulator.
+1. **Phase 12.6 (Billing Simulation):** Mock subscription tiers / Stripe webhook simulator.
+2. **Optional:** Tag git release for Phase 12.5 completion.
 
 
 ## Key Decisions & Why
@@ -680,4 +692,25 @@ pm run build).
   - Modified: `ExtractionRepository.java`, `DocumentProcessingService.java`, `DocumentService.java`, `DocumentController.java`, `DocumentServiceTest.java`, `WorkspaceIsolationTest.java`, `AnomalyFlag.jsx`, `DocumentDetail.jsx`, `Dashboard.jsx`, `phases.md`, `architecture.md`, `memory.md`, `task.md`.
 - Next session should: Proceed to Phase 12.5 (4th Document Type - KYC Form) or Phase 12.6 (Billing Simulation).
 
-
+### Session 42 — 2026-09-19
+- Implemented Phase 12.5: 4th Document Type — KYC Form.
+- Backend:
+  - Added `KYC_FORM` to `DocumentType.java` enum (no Flyway migration needed — `type` column is `VARCHAR(50)`).
+  - Created `KycExtractionDto.java` with `@NotNull`-validated identity fields: `fullName`, `idType`, `idNumber`, `dateOfBirth`, `nationality`, `issueDate`, `expiryDate`, `address`, `verificationStatus`, and `fieldConfidences` map.
+  - Created `ExtractKycPrompt.java` with strict Gemini prompt and complete JSON schema (9 fields + per-field confidence scoring).
+  - Updated `ExtractionService.java`: added `extractKycFields()` method; added `case KYC_FORM ->` branch to `extractDocumentFields()` dispatch switch.
+- Tests & Validation:
+  - Added `testExtractKycFieldsSuccess` to `ExtractionServiceTest.java` (dispatches via `extractDocumentFields()`, verifies JSON, field values, and `fieldConfidences`).
+  - Executed `mvn test` — **39 tests passed, 0 failures, 100% green**.
+  - Executed `npm run build` — **Vite client bundle built cleanly in 657ms, 0 errors**.
+- Frontend UI:
+  - Updated `UploadDocument.jsx` with `{ value: 'KYC_FORM', label: 'KYC Form', desc: 'ID cards, passports, verification forms' }`.
+  - Updated `TemplateManager.jsx` DOCUMENT_TYPES with KYC Forms tab.
+  - Updated `Dashboard.jsx` typeFilter select with KYC Forms option.
+  - Updated `DocumentDetail.jsx` ExtractionFields dispatcher + added `KycFields` renderer: 2-column identity grid, per-field confidence badges, color-coded verificationStatus bar.
+- Docs Updated: `phases.md`, `architecture.md`, `memory.md`, `task.md`.
+- Files touched:
+  - Created: `KycExtractionDto.java`, `ExtractKycPrompt.java`.
+  - Modified: `DocumentType.java`, `ExtractionService.java`, `ExtractionServiceTest.java`, `UploadDocument.jsx`, `TemplateManager.jsx`, `Dashboard.jsx`, `DocumentDetail.jsx`, `phases.md`, `architecture.md`, `memory.md`, `task.md`.
+- Tested/confirmed: `mvn test` (39 tests, 0 failures), `npm run build` (clean, 0 errors).
+- Next session should: Proceed to Phase 12.6 (Billing Simulation) or evaluate production readiness per AGENTS.md §8.

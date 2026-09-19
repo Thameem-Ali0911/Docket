@@ -3,5 +3,6 @@ package com.docket.entity;
 public enum DocumentType {
     INVOICE,
     CONTRACT,
-    RESUME
+    RESUME,
+    KYC_FORM
 }

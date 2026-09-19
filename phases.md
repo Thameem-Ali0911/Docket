@@ -228,7 +228,7 @@
 - [x] Phase 12.2: Confidence scores on extracted fields (Gemini schema `fieldConfidences` + visual score pills)
 - [x] Phase 12.3: Background job queue (RabbitMQ + Spring AMQP with dual-mode `@Async` fallback)
 - [x] Phase 12.4: Multi-document comparative anomaly detection (duplicate invoices, price surge spikes >50%, payment term drift, and workspace vendor trends)
-- [ ] Phase 12.5: 4th document type (KYC form)
+- [x] Phase 12.5: 4th document type (KYC form — `KYC_FORM` with `KycExtractionDto`, `ExtractKycPrompt`, full UI renderer)
 - [ ] Phase 12.6: Billing simulation (Stripe test mode)
 
-**Note:** Phases 0–11 and 12.1–12.4 are fully implemented, verified, and test-covered (38 passing automated tests).
+**Note:** Phases 0–11 and 12.1–12.5 are fully implemented, verified, and test-covered (39 passing automated tests).

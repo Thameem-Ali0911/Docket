@@ -8,11 +8,13 @@ import org.springframework.stereotype.Service;
 
 import com.docket.dto.ContractExtractionDto;
 import com.docket.dto.InvoiceExtractionDto;
+import com.docket.dto.KycExtractionDto;
 import com.docket.dto.ResumeExtractionDto;
 import com.docket.entity.Document;
 import com.docket.entity.Extraction;
 import com.docket.prompt.ExtractContractPrompt;
 import com.docket.prompt.ExtractInvoicePrompt;
+import com.docket.prompt.ExtractKycPrompt;
 import com.docket.prompt.ExtractResumePrompt;
 import com.docket.repository.ExtractionRepository;
 import com.docket.util.SanitizationUtils;
@@ -106,6 +108,11 @@ public class ExtractionService {
         extractFields(document, prompt, ExtractResumePrompt.JSON_SCHEMA, ResumeExtractionDto.class);
     }
 
+    public void extractKycFields(Document document) {
+        String prompt = ExtractKycPrompt.PROMPT_TEXT + "\n\nDocument text:\n" + document.getExtractedText();
+        extractFields(document, prompt, ExtractKycPrompt.JSON_SCHEMA, KycExtractionDto.class);
+    }
+
     /**
      * Dispatches structured field extraction based on document type.
      */
@@ -114,6 +121,7 @@ public class ExtractionService {
             case INVOICE  -> extractInvoiceFields(document);
             case CONTRACT -> extractContractFields(document);
             case RESUME   -> extractResumeFields(document);
+            case KYC_FORM -> extractKycFields(document);
             default       -> log.warn("No extractor defined for document type={}", document.getType());
         }
     }
