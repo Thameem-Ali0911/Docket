@@ -24,5 +24,8 @@ public interface DocumentRepository extends JpaRepository<Document, Integer> {
     List<Document> findByStatus(DocumentStatus status);
 
     List<Document> findByStatusAndUploadedAtBefore(DocumentStatus status, OffsetDateTime threshold);
+
+    // Usage tracking for billing periods
+    long countByWorkspaceIdAndUploadedAtGreaterThanEqual(Integer workspaceId, OffsetDateTime since);
 }
 

@@ -31,6 +31,24 @@ public class Workspace {
     @Column(name = "daily_llm_budget", nullable = false)
     private int dailyLlmBudget = 100;
 
+    @Column(name = "plan_tier", nullable = false, length = 30)
+    private String planTier = "FREE";
+
+    @Column(name = "subscription_status", nullable = false, length = 30)
+    private String subscriptionStatus = "ACTIVE";
+
+    @Column(name = "stripe_customer_id", length = 100)
+    private String stripeCustomerId;
+
+    @Column(name = "stripe_subscription_id", length = 100)
+    private String stripeSubscriptionId;
+
+    @Column(name = "billing_period_start")
+    private OffsetDateTime billingPeriodStart = OffsetDateTime.now();
+
+    @Column(name = "billing_period_end")
+    private OffsetDateTime billingPeriodEnd = OffsetDateTime.now().plusDays(30);
+
     protected Workspace() {
         // JPA requires a no-arg constructor
     }
@@ -61,5 +79,53 @@ public class Workspace {
 
     public void setDailyLlmBudget(int dailyLlmBudget) {
         this.dailyLlmBudget = dailyLlmBudget;
+    }
+
+    public String getPlanTier() {
+        return planTier;
+    }
+
+    public void setPlanTier(String planTier) {
+        this.planTier = planTier;
+    }
+
+    public String getSubscriptionStatus() {
+        return subscriptionStatus;
+    }
+
+    public void setSubscriptionStatus(String subscriptionStatus) {
+        this.subscriptionStatus = subscriptionStatus;
+    }
+
+    public String getStripeCustomerId() {
+        return stripeCustomerId;
+    }
+
+    public void setStripeCustomerId(String stripeCustomerId) {
+        this.stripeCustomerId = stripeCustomerId;
+    }
+
+    public String getStripeSubscriptionId() {
+        return stripeSubscriptionId;
+    }
+
+    public void setStripeSubscriptionId(String stripeSubscriptionId) {
+        this.stripeSubscriptionId = stripeSubscriptionId;
+    }
+
+    public OffsetDateTime getBillingPeriodStart() {
+        return billingPeriodStart;
+    }
+
+    public void setBillingPeriodStart(OffsetDateTime billingPeriodStart) {
+        this.billingPeriodStart = billingPeriodStart;
+    }
+
+    public OffsetDateTime getBillingPeriodEnd() {
+        return billingPeriodEnd;
+    }
+
+    public void setBillingPeriodEnd(OffsetDateTime billingPeriodEnd) {
+        this.billingPeriodEnd = billingPeriodEnd;
     }
 }

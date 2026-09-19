@@ -52,6 +52,8 @@ class DocumentServiceTest {
     private LlmBudgetService llmBudgetService;
     @Mock
     private ComparativeAnomalyService comparativeAnomalyService;
+    @Mock
+    private BillingService billingService;
 
     private DocumentService documentService;
 
@@ -71,6 +73,7 @@ class DocumentServiceTest {
                 exportService,
                 llmBudgetService,
                 comparativeAnomalyService,
+                billingService,
                 Optional.empty()
         );
 
@@ -189,6 +192,7 @@ class DocumentServiceTest {
                 exportService,
                 llmBudgetService,
                 comparativeAnomalyService,
+                billingService,
                 Optional.of(publisher)
         );
 

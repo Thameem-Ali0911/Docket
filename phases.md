@@ -229,6 +229,6 @@
 - [x] Phase 12.3: Background job queue (RabbitMQ + Spring AMQP with dual-mode `@Async` fallback)
 - [x] Phase 12.4: Multi-document comparative anomaly detection (duplicate invoices, price surge spikes >50%, payment term drift, and workspace vendor trends)
 - [x] Phase 12.5: 4th document type (KYC form — `KYC_FORM` with `KycExtractionDto`, `ExtractKycPrompt`, full UI renderer)
-- [ ] Phase 12.6: Billing simulation (Stripe test mode)
+- [x] Phase 12.6: Billing simulation (Stripe test mode — subscription tiers `FREE`/`PRO`/`ENTERPRISE`, document quota enforcement, simulated invoices, interactive webhook simulator, and Billing Hub UI)
 
-**Note:** Phases 0–11 and 12.1–12.5 are fully implemented, verified, and test-covered (39 passing automated tests).
+**Note:** All phases — Phases 0–11 and all Phase 12 stretch goals (12.1–12.6) — are fully implemented, verified, and test-covered (51 passing automated tests, 100% green).

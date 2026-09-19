@@ -238,12 +238,13 @@ docket/
 ## 5. Data Model (Core Tables)
 
 - **users** (id, email, password_hash, workspace_id, created_at)
-- **workspaces** (id, name, created_at)
+- **workspaces** (id, name, plan_tier [FREE/PRO/ENTERPRISE], subscription_status, stripe_customer_id, stripe_subscription_id, billing_period_start, billing_period_end, daily_llm_budget, created_at)
 - **documents** (id, workspace_id, type [CONTRACT/INVOICE/RESUME/KYC_FORM], file_url, status, uploaded_at)
 - **extractions** (id, document_id, field_key, field_value, confidence)
 - **summaries** (id, document_id, summary_text)
 - **templates** (id, workspace_id, type, document_id — points to which document is the "standard")
 - **anomaly_flags** (id, document_id, field_key, description, severity)
+- **simulated_invoices** (id, workspace_id, invoice_number, amount_cents, currency, status, description, period_start, period_end, created_at)
 
 ## 6. API Design (representative endpoints)
 
@@ -264,6 +265,10 @@ GET    /api/templates/{type}
 DELETE /api/templates/{type}
 GET    /api/documents/{id}/export?format={json|csv}
 GET    /api/documents/export?format={json|csv}
+GET    /api/billing/subscription         # Subscription tier, limits, and live usage meters (Phase 12.6)
+GET    /api/billing/invoices             # Simulated invoice history (Phase 12.6)
+POST   /api/billing/upgrade              # Upgrade/downgrade subscription plan (Phase 12.6)
+POST   /api/billing/webhook/simulate     # Interactive Stripe test-mode webhook simulator (Phase 12.6)
 GET    /actuator/health                  # Database + application health check
 GET    /swagger-ui.html                  # Interactive OpenAPI docs (Phase 10)
 ```

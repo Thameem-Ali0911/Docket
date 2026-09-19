@@ -16,9 +16,9 @@
 
 ## Current Status
 
-- **Active Phase:** Phase 12 — Stretch Goals & Enterprise Enhancements
+- **Active Phase:** Production Readiness & Final Verification (All Phases 0–12 Complete)
 - **Last Updated:** 2026-09-19
-- **Overall Progress:** ~99.7% — Phases 0–11 complete; Phase 12.1 (Batch Upload), Phase 12.2 (Field-Level Confidence Scoring), Phase 12.3 (RabbitMQ Queue Processing), Phase 12.4 (Multi-Document Comparative Anomaly Detection & Vendor Trends), and Phase 12.5 (4th Document Type — KYC Form) complete. 39 passing automated tests (100% green), frontend builds cleanly.
+- **Overall Progress:** 100% — All 12 phases complete (Phases 0–11 and all Phase 12 stretch goals: 12.1 Batch Upload, 12.2 Confidence Scores, 12.3 RabbitMQ Queue, 12.4 Comparative Anomaly Detection & Vendor Trends, 12.5 KYC Form Document Type, and 12.6 Billing Simulation & Stripe Test Mode). 51 passing automated tests (100% green), frontend builds cleanly.
 
 ## Completed
 
@@ -136,15 +136,26 @@
   - Updated `DocumentDetail.jsx` `ExtractionFields` dispatch and added `KycFields` renderer component with: 2-column identity grid (`fullName`, `idType`, `idNumber`, `dateOfBirth`, `nationality`, `issueDate`, `expiryDate`, `address`), all fields with per-field confidence badges, and a status bar with color-coded `verificationStatus` (green=VALID/VERIFIED, red=EXPIRED, amber=other).
   - `mvn test` — **39 tests passed, 0 failures** (100% green).
   - `npm run build` — **Vite client bundle built cleanly in 657ms, 0 errors** (443 kB JS / 28 kB CSS).
+- [x] Phase 12.6: Billing Simulation & Stripe Test Mode:
+  - Created Flyway migration `V10__billing_simulation.sql` adding `plan_tier`, `subscription_status`, `stripe_customer_id`, `stripe_subscription_id`, `billing_period_start`, `billing_period_end` to `workspaces`, and creating `simulated_invoices` table with indexing.
+  - Created `SimulatedInvoice.java` entity, `SimulatedInvoiceRepository.java`, and `PlanTier.java` enum (`FREE`, `PRO`, `ENTERPRISE`).
+  - Created DTO records: `SubscriptionDetailsDto.java`, `SimulatedInvoiceDto.java`, `UpgradePlanRequestDto.java`, `SimulateWebhookRequestDto.java`.
+  - Implemented `BillingService.java`: plan tier upgrades, monthly document quota enforcement (`checkDocumentQuota`), simulated Stripe customer/subscription ID generation, and real-time simulated webhook handling (`invoice.payment_succeeded`, `invoice.payment_failed`, `customer.subscription.updated`, `customer.subscription.deleted`).
+  - Wired quota enforcement into `DocumentService.java` (`uploadDocument` and `uploadDocuments` batch).
+  - Created `BillingController.java` (`GET /api/billing/subscription`, `GET /api/billing/invoices`, `POST /api/billing/upgrade`, `POST /api/billing/webhook/simulate`).
+  - Created `BillingServiceTest.java` with 11 comprehensive unit tests (51/51 tests passing 100% green).
+  - Created `Billing.jsx` page: Obsidian Aurora UI with monthly document quota progress meter (emerald/amber/red thresholds), daily LLM budget meter, simulated Stripe customer/subscription badges with one-click copy, 3-tier plan comparison cards with simulated checkout, interactive Stripe Webhook Simulator console, and simulated invoice/receipt history table.
+  - Added protected `/billing` route in `App.jsx` and Billing navigation buttons to `Dashboard.jsx` and `TemplateManager.jsx`.
+  - Frontend production bundle built cleanly in 769ms (`npm run build`).
 
 ## In Progress
 
-- Phase 12: Stretch Goals & Enterprise Enhancements — Phase 12.6 (Billing Simulation) is the remaining stretch goal.
+- None — all 12 phases and all Phase 12 stretch features (12.1 through 12.6) are complete!
 
 ## Next Steps (in order)
 
-1. **Phase 12.6 (Billing Simulation):** Mock subscription tiers / Stripe webhook simulator.
-2. **Optional:** Tag git release for Phase 12.5 completion.
+1. **Production Readiness Review:** Run through AGENTS.md §8 checklist (build verification, security checklist, demo script).
+2. **Deploy / Demo Rehearsal:** Run `DEMO_SCRIPT.md` walkthrough.
 
 
 ## Key Decisions & Why
@@ -161,6 +172,7 @@
 | Phase Plan Expansion (Phases 9 & 10 inserted; Deployment & Stretch moved to 11 & 12) | Rigorous architectural evaluation (`Docket_Evaluation_Report.md`) identified production gaps (unauthenticated file access, zero tests, triplicated code, lack of pagination, missing DB index); formal phases inserted to remediate all gaps to senior SWE bar | phases.md Phase 9 & 10, memory.md — Session 33 |
 | Dual-mode queue & async processing (Phase 12.3) | Allows running without RabbitMQ in lightweight local-dev while enabling durable, horizontally scalable queue processing in Docker/production via `docket.processing.mode` | architecture.md §3.4, rules.md §2, RabbitMqConfig.java |
 | Deterministic Comparative Anomaly Detection (Phase 12.4) | Evaluates duplicates, price surges, and term contractions mathematically over Postgres extraction history — fast, zero-token cost, avoids consuming LLM rate limits | architecture.md §3.6.1, ComparativeAnomalyService.java |
+| In-memory & DB Stripe Test Mode Simulation (Phase 12.6) | Simulates subscription tiers (FREE, PRO, ENTERPRISE), quotas, and Stripe webhooks in-database without external paid Stripe account dependencies, matching PRD §7 non-goals | architecture.md §5, §6, BillingService.java |
 
 ## Known Issues / Gotchas
 
@@ -712,5 +724,33 @@ pm run build).
 - Files touched:
   - Created: `KycExtractionDto.java`, `ExtractKycPrompt.java`.
   - Modified: `DocumentType.java`, `ExtractionService.java`, `ExtractionServiceTest.java`, `UploadDocument.jsx`, `TemplateManager.jsx`, `Dashboard.jsx`, `DocumentDetail.jsx`, `phases.md`, `architecture.md`, `memory.md`, `task.md`.
-- Tested/confirmed: `mvn test` (39 tests, 0 failures), `npm run build` (clean, 0 errors).
 - Next session should: Proceed to Phase 12.6 (Billing Simulation) or evaluate production readiness per AGENTS.md §8.
+
+### Session 43 — 2026-09-19
+- Implemented Phase 12.6: Billing Simulation & Stripe Test Mode.
+- Backend Subsystem:
+  - Created Flyway migration `V10__billing_simulation.sql` adding `plan_tier`, `subscription_status`, `stripe_customer_id`, `stripe_subscription_id`, `billing_period_start`, `billing_period_end` to `workspaces`, and creating `simulated_invoices` table.
+  - Updated `Workspace.java` entity with subscription columns and accessors.
+  - Created `SimulatedInvoice.java` entity and `SimulatedInvoiceRepository.java`.
+  - Added `countByWorkspaceIdAndUploadedAtGreaterThanEqual` to `DocumentRepository.java`.
+  - Created `PlanTier.java` enum defining `FREE`, `PRO`, `ENTERPRISE` tiers, limits, and pricing.
+  - Created DTOs: `SubscriptionDetailsDto.java`, `SimulatedInvoiceDto.java`, `UpgradePlanRequestDto.java`, `SimulateWebhookRequestDto.java`.
+  - Created `BillingService.java`: handles plan tier upgrades, monthly document quota enforcement (`checkDocumentQuota`), simulated Stripe customer/subscription ID generation, and real-time simulated webhook handling (`invoice.payment_succeeded`, `invoice.payment_failed`, `customer.subscription.updated`, `customer.subscription.deleted`).
+  - Injected `BillingService` into `DocumentService.java` to enforce monthly document quota guards on single and batch uploads.
+  - Created `BillingController.java` (`GET /api/billing/subscription`, `GET /api/billing/invoices`, `POST /api/billing/upgrade`, `POST /api/billing/webhook/simulate`).
+- Tests & Verification:
+  - Created `BillingServiceTest.java` with 11 comprehensive unit tests covering plan upgrades, quota checks, past due enforcement, webhook simulations, and invoice retrieval.
+  - Updated `DocumentServiceTest.java` and `WorkspaceIsolationTest.java` with `BillingService` mocks.
+  - Executed `mvn test` — **51 tests passed, 0 failures, 100% green**.
+- Frontend UI:
+  - Created `Billing.jsx`: Obsidian Aurora UI with monthly document quota progress meter (emerald/amber/red thresholds), daily LLM budget meter, simulated Stripe customer/subscription badges with one-click copy, 3-tier plan comparison cards with simulated checkout, interactive Stripe Webhook Simulator console, and simulated invoice/receipt history table.
+  - Registered protected route `/billing` in `App.jsx`.
+  - Added "Billing" navigation buttons to `Dashboard.jsx` and `TemplateManager.jsx`.
+  - Executed `npm run build` — **Vite client bundle built cleanly in 769ms, 0 errors**.
+- Docs Updated: `phases.md`, `architecture.md`, `memory.md`, `walkthrough.md`.
+- Files touched:
+  - Created: `V10__billing_simulation.sql`, `SimulatedInvoice.java`, `SimulatedInvoiceRepository.java`, `PlanTier.java`, `SubscriptionDetailsDto.java`, `SimulatedInvoiceDto.java`, `UpgradePlanRequestDto.java`, `SimulateWebhookRequestDto.java`, `BillingService.java`, `BillingController.java`, `BillingServiceTest.java`, `Billing.jsx`.
+  - Modified: `Workspace.java`, `DocumentRepository.java`, `DocumentService.java`, `DocumentServiceTest.java`, `WorkspaceIsolationTest.java`, `App.jsx`, `Dashboard.jsx`, `TemplateManager.jsx`, `phases.md`, `architecture.md`, `memory.md`, `walkthrough.md`.
+- Tested/confirmed: `mvn test` (51 tests passed, 0 failures), `npm run build` (clean Vite build, 0 errors).
+- Next session should: Perform final production readiness evaluation per AGENTS.md §8 and deployment rehearsal.
+

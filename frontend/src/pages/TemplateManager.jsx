@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
-import { ArrowLeft, CheckCircle2, AlertTriangle, Trash2, Eye, Upload, SlidersHorizontal } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, AlertTriangle, Trash2, Eye, Upload, SlidersHorizontal, CreditCard } from 'lucide-react';
 import { apiFetch, clearToken } from '../lib/api';
 import AmbientAurora from '../components/ui/AmbientAurora';
 
@@ -119,10 +119,16 @@ export default function TemplateManager() {
                         <span style={{ color: 'var(--color-text-disabled)', fontSize: 13 }}>/</span>
                         <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--color-text-secondary)' }}>Templates</span>
                     </div>
-                    <button onClick={() => navigate('/dashboard')} className="btn-secondary"
-                        style={{ padding: '6px 14px', fontSize: 13 }}>
-                        <ArrowLeft size={13} /> Dashboard
-                    </button>
+                    <div className="flex items-center gap-2">
+                        <button onClick={() => navigate('/billing')} className="btn-secondary"
+                            style={{ padding: '6px 14px', fontSize: 13 }}>
+                            <CreditCard size={13} /> Billing
+                        </button>
+                        <button onClick={() => navigate('/dashboard')} className="btn-secondary"
+                            style={{ padding: '6px 14px', fontSize: 13 }}>
+                            <ArrowLeft size={13} /> Dashboard
+                        </button>
+                    </div>
                 </div>
             </nav>
 

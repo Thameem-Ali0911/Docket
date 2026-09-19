@@ -55,6 +55,7 @@ public class DocumentService {
     private final ExportService exportService;
     private final LlmBudgetService llmBudgetService;
     private final ComparativeAnomalyService comparativeAnomalyService;
+    private final BillingService billingService;
     private final Optional<DocumentQueuePublisher> queuePublisher;
 
     public DocumentService(DocumentRepository documentRepository,
@@ -67,6 +68,7 @@ public class DocumentService {
                            ExportService exportService,
                            LlmBudgetService llmBudgetService,
                            ComparativeAnomalyService comparativeAnomalyService,
+                           BillingService billingService,
                            Optional<DocumentQueuePublisher> queuePublisher) {
         this.documentRepository = documentRepository;
         this.userRepository = userRepository;
@@ -78,12 +80,16 @@ public class DocumentService {
         this.exportService = exportService;
         this.llmBudgetService = llmBudgetService;
         this.comparativeAnomalyService = comparativeAnomalyService;
+        this.billingService = billingService;
         this.queuePublisher = queuePublisher;
     }
 
     public Document uploadDocument(Integer userId, DocumentType type, MultipartFile file) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "USER_NOT_FOUND", "User not found"));
+
+        // Enforce monthly document plan quota
+        billingService.checkDocumentQuota(user.getWorkspace().getId(), 1);
 
         String fileUrl = storageService.store(file);
 
@@ -116,6 +122,9 @@ public class DocumentService {
 
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "USER_NOT_FOUND", "User not found"));
+
+        // Enforce monthly document plan quota for batch size
+        billingService.checkDocumentQuota(user.getWorkspace().getId(), files.size());
 
         List<Document> documents = new java.util.ArrayList<>();
         for (MultipartFile file : files) {

@@ -5,6 +5,7 @@ import Dashboard from './pages/Dashboard';
 import UploadDocument from './pages/UploadDocument';
 import DocumentDetail from './pages/DocumentDetail';
 import TemplateManager from './pages/TemplateManager';
+import Billing from './pages/Billing';
 import ProtectedRoute from './components/ProtectedRoute';
 
 function App() {
@@ -43,6 +44,14 @@ function App() {
                     element={
                         <ProtectedRoute>
                             <TemplateManager />
+                        </ProtectedRoute>
+                    }
+                />
+                <Route
+                    path="/billing"
+                    element={
+                        <ProtectedRoute>
+                            <Billing />
                         </ProtectedRoute>
                     }
                 />

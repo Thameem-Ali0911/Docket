@@ -4,7 +4,8 @@ import { motion, AnimatePresence } from 'motion/react';
 import {
     FileText, CheckCircle2, AlertTriangle, Clock, XCircle,
     Download, Upload, SlidersHorizontal, Search, X, LayoutDashboard, LogOut,
-    TrendingUp, TrendingDown, Building2, Copy, DollarSign, Layers, ArrowUpRight, ShieldAlert
+    TrendingUp, TrendingDown, Building2, Copy, DollarSign, Layers, ArrowUpRight, ShieldAlert,
+    CreditCard
 } from 'lucide-react';
 import { apiFetch, clearToken, downloadExport } from '../lib/api';
 import AmbientAurora from '../components/ui/AmbientAurora';
@@ -234,6 +235,14 @@ export default function Dashboard() {
                         >
                             <SlidersHorizontal size={13} />
                             Templates
+                        </button>
+                        <button
+                            className="btn-secondary"
+                            onClick={() => navigate('/billing')}
+                            style={{ padding: '7px 16px', fontSize: 13 }}
+                        >
+                            <CreditCard size={13} />
+                            Billing
                         </button>
                         <button
                             className="btn-primary"
